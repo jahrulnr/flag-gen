@@ -13,4 +13,3 @@ type Project struct {
 	UpdatedAt time.Time
 	DeletedAt *time.Time
 }
-

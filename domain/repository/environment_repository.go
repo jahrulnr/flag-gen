@@ -11,4 +11,3 @@ type EnvironmentRepository interface {
 	Create(ctx context.Context, env entity.Environment) (entity.Environment, error)
 	FindByProjectAndKey(ctx context.Context, projectID, envKey string) (*entity.Environment, error)
 }
-

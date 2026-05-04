@@ -68,26 +68,26 @@ type flagRuleDTO struct {
 }
 
 type createFlagRequest struct {
-	Key         string       `json:"key"`
-	Name        string       `json:"name"`
-	Description string       `json:"description"`
-	Enabled     bool         `json:"enabled"`
-	ClientSide  bool         `json:"clientSide"`
-	Value       flagValueDTO `json:"value"`
-	Rules       []flagRuleDTO`json:"rules"`
-	Rollout     *rolloutDTO  `json:"rollout"`
+	Key         string        `json:"key"`
+	Name        string        `json:"name"`
+	Description string        `json:"description"`
+	Enabled     bool          `json:"enabled"`
+	ClientSide  bool          `json:"clientSide"`
+	Value       flagValueDTO  `json:"value"`
+	Rules       []flagRuleDTO `json:"rules"`
+	Rollout     *rolloutDTO   `json:"rollout"`
 }
 
 type updateFlagRequest struct {
-	Version     int          `json:"version"`
-	Key         *string      `json:"key,omitempty"`
-	Name        string       `json:"name"`
-	Description string       `json:"description"`
-	Enabled     bool         `json:"enabled"`
-	ClientSide  bool         `json:"clientSide"`
-	Value       flagValueDTO `json:"value"`
-	Rules       []flagRuleDTO`json:"rules"`
-	Rollout     *rolloutDTO  `json:"rollout"`
+	Version     int           `json:"version"`
+	Key         *string       `json:"key,omitempty"`
+	Name        string        `json:"name"`
+	Description string        `json:"description"`
+	Enabled     bool          `json:"enabled"`
+	ClientSide  bool          `json:"clientSide"`
+	Value       flagValueDTO  `json:"value"`
+	Rules       []flagRuleDTO `json:"rules"`
+	Rollout     *rolloutDTO   `json:"rollout"`
 }
 
 func (h *FlagsHandler) List(c *gin.Context) {
@@ -313,4 +313,3 @@ func (h *FlagsHandler) withIdempotency(c *gin.Context, projectID string, rawRequ
 	c.JSON(code, body)
 	return nil
 }
-

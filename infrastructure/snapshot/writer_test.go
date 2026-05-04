@@ -15,9 +15,10 @@ func TestWriter_WriteAtomic_AndReader_ReadValidated(t *testing.T) {
 	w := NewWriter(dir)
 	r := NewReader(dir)
 
-	path, err := w.WriteAtomic("p1", "prod", 42, []map[string]any{{"key": "k1"}})
+	path, hex, err := w.WriteAtomic("p1", "prod", 42, []map[string]any{{"key": "k1"}})
 	require.NoError(t, err)
 	require.Equal(t, filepath.Join(dir, "p1__prod.snapshot.json"), path)
+	require.NotEmpty(t, hex)
 
 	f, _, err := r.ReadValidated("p1", "prod")
 	require.NoError(t, err)
@@ -32,7 +33,7 @@ func TestReader_ReadValidated_DetectsChecksumMismatch(t *testing.T) {
 	w := NewWriter(dir)
 	r := NewReader(dir)
 
-	path, err := w.WriteAtomic("p1", "prod", 42, []map[string]any{{"key": "k1"}})
+	path, _, err := w.WriteAtomic("p1", "prod", 42, []map[string]any{{"key": "k1"}})
 	require.NoError(t, err)
 
 	b, err := os.ReadFile(path)
@@ -43,4 +44,3 @@ func TestReader_ReadValidated_DetectsChecksumMismatch(t *testing.T) {
 	_, _, err = r.ReadValidated("p1", "prod")
 	require.Error(t, err)
 }
-

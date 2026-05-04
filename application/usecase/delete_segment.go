@@ -21,4 +21,3 @@ func (u *DeleteSegmentUsecase) Execute(ctx context.Context, projectID, segmentID
 	}
 	return u.segments.SoftDelete(ctx, projectID, segmentID)
 }
-

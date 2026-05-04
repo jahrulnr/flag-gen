@@ -36,4 +36,3 @@ func newCorrelationID() string {
 	}
 	return hex.EncodeToString(b[:])
 }
-

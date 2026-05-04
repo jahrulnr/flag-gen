@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"flag-gen/domain/entity"
@@ -107,6 +109,7 @@ ORDER BY f.created_at ASC`
 	defer rows.Close()
 
 	var out []entity.Flag
+	var flagIDs []string
 	for rows.Next() {
 		var f entity.Flag
 		var desc sql.NullString
@@ -148,17 +151,19 @@ ORDER BY f.created_at ASC`
 			f.Rollout = &entity.RolloutConfig{Percentage: rolloutPct.Float64, Stickiness: rolloutStickiness}
 		}
 
-		// Rules are optional; load per flag (acceptable for MVP; can be optimized later).
-		rules, err := r.listRules(ctx, f.ID)
-		if err != nil {
-			return nil, err
-		}
-		f.Rules = rules
-
+		flagIDs = append(flagIDs, f.ID)
 		out = append(out, f)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, apperror.NewInfrastructureError("DB", "flags rows failed", err)
+	}
+
+	rulesByFlag, err := r.listRulesForFlagIDs(ctx, flagIDs)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		out[i].Rules = rulesByFlag[out[i].ID]
 	}
 	return out, nil
 }
@@ -294,7 +299,7 @@ VALUES
 	if err := r.insertAuditEntry(ctx, tx, scope.ProjectID, envID, f.ID, "created", nil, mustJSON(f)); err != nil {
 		return entity.Flag{}, err
 	}
-	if err := r.insertOutbox(ctx, tx, scope.ProjectID, envID, f.ID, f.Key, f.Version, "flag.created"); err != nil {
+	if err := r.insertOutbox(ctx, tx, scope.ProjectID, envID, scope.EnvironmentKey, f.ID, f.Key, f.Version, "flag.created"); err != nil {
 		return entity.Flag{}, err
 	}
 
@@ -378,7 +383,7 @@ WHERE id = ? AND project_id = ? AND environment_id = ? AND deleted_at IS NULL AN
 	if err := r.insertAuditEntry(ctx, tx, scope.ProjectID, envID, f.ID, "updated", oldJSON, mustJSON(f)); err != nil {
 		return entity.Flag{}, err
 	}
-	if err := r.insertOutbox(ctx, tx, scope.ProjectID, envID, f.ID, f.Key, f.Version, "flag.updated"); err != nil {
+	if err := r.insertOutbox(ctx, tx, scope.ProjectID, envID, scope.EnvironmentKey, f.ID, f.Key, f.Version, "flag.updated"); err != nil {
 		return entity.Flag{}, err
 	}
 
@@ -429,7 +434,7 @@ WHERE id = ? AND project_id = ? AND environment_id = ? AND deleted_at IS NULL AN
 	}(), nil); err != nil {
 		return err
 	}
-	if err := r.insertOutbox(ctx, tx, scope.ProjectID, envID, flagID, func() string {
+	if err := r.insertOutbox(ctx, tx, scope.ProjectID, envID, scope.EnvironmentKey, flagID, func() string {
 		if old != nil {
 			return old.Key
 		}
@@ -458,6 +463,55 @@ LIMIT 1`
 		return "", apperror.NewInfrastructureError("DB", "environment lookup failed", err)
 	}
 	return id, nil
+}
+
+func (r *FlagRepository) listRulesForFlagIDs(ctx context.Context, flagIDs []string) (map[string][]entity.FlagRule, error) {
+	out := make(map[string][]entity.FlagRule)
+	if len(flagIDs) == 0 {
+		return out, nil
+	}
+	ph := strings.Repeat("?,", len(flagIDs))
+	ph = ph[:len(ph)-1]
+	args := make([]any, len(flagIDs))
+	for i, id := range flagIDs {
+		args[i] = id
+	}
+	q := fmt.Sprintf(`
+SELECT id, flag_id, priority, attribute, operator, comparison_value_json, serve_value_json
+FROM flag_rules
+WHERE flag_id IN (%s)
+ORDER BY flag_id ASC, priority ASC`, ph)
+
+	rows, err := r.db.QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, apperror.NewInfrastructureError("DB", "flag rules batch list failed", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var rrule entity.FlagRule
+		var flagID string
+		var priority int
+		var attr sql.NullString
+		var op string
+		var cmp []byte
+		var serve []byte
+		if err := rows.Scan(&rrule.ID, &flagID, &priority, &attr, &op, &cmp, &serve); err != nil {
+			return nil, apperror.NewInfrastructureError("DB", "flag rules batch scan failed", err)
+		}
+		rrule.Priority = priority
+		if attr.Valid {
+			rrule.Attribute = attr.String
+		}
+		rrule.Operator = entity.FlagRuleOperator(op)
+		_ = json.Unmarshal(cmp, &rrule.Value)
+		_ = json.Unmarshal(serve, &rrule.Serve)
+		out[flagID] = append(out[flagID], rrule)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, apperror.NewInfrastructureError("DB", "flag rules batch rows failed", err)
+	}
+	return out, nil
 }
 
 func (r *FlagRepository) listRules(ctx context.Context, flagID string) ([]entity.FlagRule, error) {
@@ -564,7 +618,7 @@ VALUES (?, ?, ?, 'flag', ?, ?, NULL, ?, ?, ?, ?)`
 	return nil
 }
 
-func (r *FlagRepository) insertOutbox(ctx context.Context, ex execer, projectID, envID, flagID, flagKey string, version int, eventType string) error {
+func (r *FlagRepository) insertOutbox(ctx context.Context, ex execer, projectID, envID, environmentKey, flagID, flagKey string, version int, eventType string) error {
 	const q = `
 INSERT INTO outbox_events
   (id, aggregate_type, aggregate_id, aggregate_version, scope_version, project_id, environment_id, event_type, payload_json, status, retry_count, next_attempt_at, created_at)
@@ -574,6 +628,7 @@ VALUES
 	payload := map[string]any{
 		"projectId":      projectID,
 		"environmentId":  envID,
+		"environmentKey": environmentKey,
 		"flagId":         flagID,
 		"flagKey":        flagKey,
 		"version":        version,

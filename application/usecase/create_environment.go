@@ -22,4 +22,3 @@ func (u *CreateEnvironmentUsecase) Execute(ctx context.Context, env entity.Envir
 	}
 	return u.envs.Create(ctx, env)
 }
-

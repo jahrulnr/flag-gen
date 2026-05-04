@@ -17,6 +17,18 @@ type Config struct {
 	Snapshot SnapshotConfig
 	RabbitMQ RabbitMQConfig
 	Outbox   OutboxWorkerConfig
+
+	MigrationsDir      string
+	AllowDevMigrate    bool
+	BroadcastDevToken  string
+	AutoMigrateOnStart bool
+
+	BroadcastConsumerEnabled bool
+	PublicReadAPIKey         string
+	CleanupIntervalSeconds   int
+	SoftDeleteRetentionDays  int
+	CleanupPruneMaxPerScope  int
+	CleanupLockTTL           time.Duration
 }
 
 type AppConfig struct {
@@ -51,19 +63,23 @@ type RedisConfig struct {
 
 type SnapshotConfig struct {
 	Dir string
+
+	SchedulerEnabled  bool
+	SchedulerInterval time.Duration
+	SchedulerLockTTL  time.Duration
 }
 
 type RabbitMQConfig struct {
-	AMQPURL      string
-	ExchangeName string
+	AMQPURL        string
+	ExchangeName   string
 	PublishTimeout time.Duration
 }
 
 type OutboxWorkerConfig struct {
-	Enabled     bool
-	IntervalMs  int
-	BatchSize   int
-	LockFor     time.Duration
+	Enabled    bool
+	IntervalMs int
+	BatchSize  int
+	LockFor    time.Duration
 }
 
 func Load() (Config, error) {
@@ -103,6 +119,17 @@ func Load() (Config, error) {
 	cfg.Redis.DB = rdb
 
 	cfg.Snapshot.Dir = getString("SNAPSHOT_DIR", "/app/snapshot")
+	cfg.Snapshot.SchedulerEnabled = getBool("SNAPSHOT_SCHEDULER_ENABLED", false)
+	schedInt, err := getDurationSeconds("SNAPSHOT_SCHEDULER_INTERVAL", 5*time.Minute)
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.Snapshot.SchedulerInterval = schedInt
+	schedLock, err := getDurationSeconds("SNAPSHOT_SCHEDULER_LOCK_SECONDS", 120*time.Second)
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.Snapshot.SchedulerLockTTL = schedLock
 
 	cfg.RabbitMQ.AMQPURL = getString("RABBITMQ_AMQP_URL", "")
 	cfg.RabbitMQ.ExchangeName = getString("RABBITMQ_EXCHANGE", "flaggen.events")
@@ -128,6 +155,36 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	cfg.Outbox.LockFor = lockFor
+
+	cfg.MigrationsDir = getString("MIGRATIONS_DIR", "migrations/mysql")
+	cfg.AllowDevMigrate = getBool("ALLOW_DEV_MIGRATE", false)
+	cfg.BroadcastDevToken = getString("BROADCAST_DEV_TOKEN", "")
+	cfg.AutoMigrateOnStart = getBool("AUTO_MIGRATE_ON_START", false)
+
+	cfg.BroadcastConsumerEnabled = getBool("BROADCAST_CONSUMER_ENABLED", false)
+	cfg.PublicReadAPIKey = getString("PUBLIC_READ_API_KEY", "")
+	cleanupSec, err := getInt("CLEANUP_INTERVAL_SECONDS", 86400)
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.CleanupIntervalSeconds = cleanupSec
+	retDays, err := getInt("SOFT_DELETE_RETENTION_DAYS", 90)
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.SoftDeleteRetentionDays = retDays
+
+	pruneMax, err := getInt("CLEANUP_PRUNE_MAX_ROWS_PER_SCOPE", 5000)
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.CleanupPruneMaxPerScope = pruneMax
+
+	cleanupLock, err := getDurationSeconds("CLEANUP_LOCK_SECONDS", 10*time.Minute)
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.CleanupLockTTL = cleanupLock
 
 	return cfg, nil
 }
@@ -216,4 +273,3 @@ func splitCSV(raw string) []string {
 	}
 	return out
 }
-

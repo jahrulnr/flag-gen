@@ -28,4 +28,3 @@ func (u *UpdateSegmentUsecase) Execute(ctx context.Context, s entity.Segment) (e
 	}
 	return u.segments.Update(ctx, s)
 }
-

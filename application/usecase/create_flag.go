@@ -11,10 +11,11 @@ import (
 
 type CreateFlagUsecase struct {
 	flags repository.FlagRepository
+	snap  *SnapshotPointer
 }
 
-func NewCreateFlagUsecase(flags repository.FlagRepository) *CreateFlagUsecase {
-	return &CreateFlagUsecase{flags: flags}
+func NewCreateFlagUsecase(flags repository.FlagRepository, snap *SnapshotPointer) *CreateFlagUsecase {
+	return &CreateFlagUsecase{flags: flags, snap: snap}
 }
 
 func (u *CreateFlagUsecase) Execute(ctx context.Context, scope valueobject.Scope, f entity.Flag) (entity.Flag, error) {
@@ -27,6 +28,9 @@ func (u *CreateFlagUsecase) Execute(ctx context.Context, scope valueobject.Scope
 	if f.Value.Type == "" {
 		return entity.Flag{}, apperror.NewValidationError(apperror.ValidationError, "missing flag value type", nil)
 	}
-	return u.flags.Create(ctx, scope, f)
+	out, err := u.flags.Create(ctx, scope, f)
+	if err == nil && u.snap != nil {
+		u.snap.AfterFlagMutation(ctx, scope)
+	}
+	return out, err
 }
-

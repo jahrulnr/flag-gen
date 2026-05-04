@@ -12,4 +12,3 @@ type SegmentRepository interface {
 	Update(ctx context.Context, s entity.Segment) (entity.Segment, error)
 	SoftDelete(ctx context.Context, projectID, segmentID string) error
 }
-

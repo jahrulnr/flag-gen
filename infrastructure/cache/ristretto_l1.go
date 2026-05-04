@@ -24,3 +24,7 @@ func (r *RistrettoL1) Set(scopeKey string, flags []entity.Flag, ttl time.Duratio
 	// Cost is approximate; flags are small for MVP.
 	r.c.SetWithTTL(scopeKey, flags, int64(len(flags)+1), ttl)
 }
+
+func (r *RistrettoL1) Delete(scopeKey string) {
+	r.c.Del(scopeKey)
+}

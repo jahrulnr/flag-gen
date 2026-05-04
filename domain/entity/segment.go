@@ -20,4 +20,3 @@ type Segment struct {
 	UpdatedAt time.Time
 	DeletedAt *time.Time
 }
-

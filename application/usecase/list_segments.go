@@ -22,4 +22,3 @@ func (u *ListSegmentsUsecase) Execute(ctx context.Context, projectID string) ([]
 	}
 	return u.segments.ListByProject(ctx, projectID)
 }
-

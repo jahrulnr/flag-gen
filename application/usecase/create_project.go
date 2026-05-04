@@ -22,4 +22,3 @@ func (u *CreateProjectUsecase) Execute(ctx context.Context, p entity.Project) (e
 	}
 	return u.projects.Create(ctx, p)
 }
-

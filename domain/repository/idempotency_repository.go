@@ -16,4 +16,3 @@ type IdempotencyRepository interface {
 	MarkCompleted(ctx context.Context, recordID string, responseCode int, responseJSON []byte) error
 	MarkFailed(ctx context.Context, recordID string, responseCode int, responseJSON []byte) error
 }
-

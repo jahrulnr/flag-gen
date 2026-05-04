@@ -20,7 +20,7 @@ Dokumen ini merangkum status implementasi berdasarkan pekerjaan yang sudah dibua
 - [x] Migrations schema inti (projects, environments, segments, flags, flag_rules, versions, audit, idempotency, outbox, snapshot_metadata)
 - [x] MySQL repositories: projects, environments, segments
 - [x] MySQL flag repository: list/get/create/update/soft-delete + rules load/replace
-- [x] Snapshot metadata repository (get/upsert)
+- [x] Snapshot metadata repository (get/upsert/mark invalid/list scopes)
 - [x] Outbox repository (list, claim/lock, mark published/failed)
 - [x] Idempotency repository (begin processing + mark completed/failed)
 
@@ -64,30 +64,32 @@ Dokumen ini merangkum status implementasi berdasarkan pekerjaan yang sudah dibua
 - [x] RabbitMQ sudah tersedia di `/apps/services/compose.yml` (service `rabbitmq`, ports 5672/15672, volumes, network `services`)
 
 ## 10) Backlog / Next Steps
-- [] Database lifecycle guard: detect DB empty vs installed, schema compatibility check, block dashboard access when migrations pending
-- [] Install flow: backend-only DB config, show install page only on connected empty DB
+- [x] Database lifecycle guard: detect DB empty vs installed, schema compatibility check, block dashboard/API access when migrations pending
+- [x] Install flow backend support: backend-only DB config, install allowed only on connected empty DB
 - [] Migration blocking page + non-blocking drift notification (frontend)
-- [] Go migrator shared package/registry + separate `/app/server` and `/app/migrate` binary approach
-- [] Expose schema status endpoint (current schema version, target schema version, compatibility) for frontend gating
+- [x] Go migrator shared package/registry + separate `cmd/app` and `cmd/migrate` binary approach
+- [x] Expose schema status endpoint (current schema version, target schema version, compatibility) for frontend gating
 
-- [] WebSocket server: send full scoped flag set on connect (initial burst), then committed updates only
-- [] WebSocket runtime scope checks (project/environment keys) — do not rely on port separation
-- [] Idempotent consumers for broadcasts (dedupe by event ID + aggregate version) on subscriber side
+- [x] WebSocket server: send full scoped flag set on connect (initial burst), then committed updates via RabbitMQ consumer
+- [x] WebSocket runtime scope checks (project/environment + dev token) — do not rely on port separation
+- [x] Idempotent consumers for broadcasts (dedupe by event ID + aggregate version) on subscriber side
 
-- [] Cache behavior: negative cache `flag not found` marker in L1 (5 minutes)
-- [] Circuit breaker when L1/L2 empty + DB down + snapshot invalid (return 503, avoid hammering)
+- [x] Cache behavior: negative cache `flag not found` marker in L1 (5 minutes)
+- [x] Circuit breaker when L1/L2 empty + DB down + snapshot invalid (return 503, avoid hammering)
+- [x] Redis retry/backoff on L2 get/set/delete failures
 - [] Redis reconnect strategy: event-driven reconnect, mutex/singleflight guard, backoff + metrics
-- [] Snapshot scheduler: periodic DB/snapshot consistency checks + after DB reconnect recovery refresh
-- [] Snapshot consistency guard: local singleflight + Redis distributed mutex
+- [x] Snapshot scheduler: periodic DB/snapshot consistency checks + after DB reconnect recovery refresh
+- [x] Snapshot consistency guard: local singleflight + Redis distributed mutex
 
-- [] Soft delete retention cleanup job (retain 3 months, then hard delete)
-- [] Cleanup + pruning job guards (singleflight + Redis distributed lock)
-- [] Cap history/audit tables (target 5,000 rows each) + pruning strategy
+- [x] Soft delete retention cleanup job (retain 3 months by default, then hard delete)
+- [x] Cleanup + pruning job guards (singleflight + Redis distributed lock)
+- [x] Cap history/audit tables (target 5,000 rows each) + pruning strategy
 
-- [] Dashboard query/read models (CQRS-ish): list/detail/history/diff/rollback optimized queries
-- [] Endpoint: flag version history + diff/compare support
-- [] Endpoint: rollback flag to a prior version
+- [x] Dashboard query/read models (CQRS-ish): history/diff/rollback query support
+- [x] Endpoint: flag version history + diff/compare support
+- [x] Endpoint: rollback flag to a prior version
 
+- [x] Angular dashboard scaffold instructions in `web/dashboard/README.md`
 - [] Angular admin dashboard (GrowthBook-inspired) — scaffold app + layout utama
 - [] Angular auth pages (login/session) atau dev bypass untuk local
 - [] Angular views: Projects (list/create)
@@ -98,38 +100,46 @@ Dokumen ini merangkum status implementasi berdasarkan pekerjaan yang sudah dibua
 - [] Angular realtime: subscribe perubahan flag via WebSocket (optional; setelah broadcaster siap)
 - [] Angular UX parity: naming/structure mengikuti GrowthBook (minimalkan relearning)
 
-- [] WebSocket broadcaster untuk service-to-service subscribe (consume RabbitMQ → push ke WS clients)
-- [] WebSocket endpoint `/v1/broadcast/flags` + auth token (broadcast scope)
-- [] RabbitMQ consumer untuk broadcast worker (bind ke exchange `flaggen.events`, routingKey `flag.*`)
-- [] Event contract stabilization: header `x-event-id` + payload minimal untuk invalidation cache
+- [x] WebSocket broadcaster untuk service-to-service subscribe (consume RabbitMQ → push ke WS clients)
+- [x] WebSocket endpoint `/v1/broadcast/flags` + auth token (broadcast scope)
+- [x] RabbitMQ consumer untuk broadcast worker (bind ke exchange `flaggen.events`, routingKey `flag.*`)
+- [x] Event contract stabilization: header `x-event-id` + payload minimal untuk broadcast/cache consumers
 
-- [] Endpoint single-flag evaluate (`GET .../flags/:flagKey/evaluate?userId=...`)
-- [] Endpoint list/get flag versions (`GET /v1/.../flags/:flagId/versions`)
-- [] Endpoint audit log query (`GET /v1/.../audit?entityType=flag&entityId=...`)
-- [] Browser/client-side read-only endpoints (public flag reads) + exposure rules
+- [x] Endpoint single-flag evaluate (`GET .../flags/evaluate?flagKey=...&userId=...`)
+- [x] Endpoint list flag versions + diff snapshots (`GET /v1/.../flags/:flagId/versions`)
+- [x] Endpoint audit log query (`GET /v1/.../audit?entityType=flag&entityId=...`)
+- [x] Browser/client-side read-only endpoint (public flag reads) + optional static API key
+- [] Browser/client-side exposure rules (`clientSide` filtering and payload policy)
+- [x] SDK support: minimal Go HTTP client for evaluate + public flag reads
 - [] SDK support: Go server-side SDK (local read state + reconnect/poll fallback)
 - [] Webhook support: delivery worker + retry policy + signature (deferred until needed)
 
-- [] OpenAPI/Swagger untuk semua endpoint `/v1` + contoh curl untuk Angular dashboard
-- [] Documentation: quickstart local (env vars, migrate, run app, run dispatcher)
+- [x] OpenAPI seed document for core `/v1` endpoints
+- [] OpenAPI/Swagger lengkap untuk semua endpoint `/v1` + contoh curl untuk Angular dashboard
+- [x] Documentation: quickstart local (env vars, migrate, run app, run dispatcher)
 
+- [x] Static API key middleware for public read endpoint (dev/simple mode)
 - [] Auth (dev-mode → API key / OAuth) + scope enforcement
 - [] API keys: generate/revoke/rotate + scope enforcement (`flags:read/write/evaluate`, `segments:*`, `broadcast:subscribe`)
+- [x] IP-based rate limiting middleware for public read endpoint
 - [] Rate limiting per API key (evaluation endpoints)
 - [] RBAC user management (deferred; kalau dashboard butuh multi user)
 - [] Dashboard authentication: username/password + secure sessions (+ optional 2FA)
 - [] Transport security: TLS configuration + deployment docs
 
-- [] Snapshot writer + snapshot metadata update otomatis (generate snapshot dari state committed, bukan manual)
-- [] Snapshot generation trigger: on outbox published (or periodic) + checksum + validate
-- [] Snapshot read-through hardening: mark invalid snapshot_metadata saat checksum mismatch
+- [x] Snapshot writer + snapshot metadata update otomatis (generate snapshot dari committed DB state, bukan manual)
+- [x] Snapshot generation trigger after flag mutation + checksum generation/validation support
+- [] Snapshot generation trigger specifically on outbox published (or periodic)
+- [x] Snapshot read-through hardening: mark invalid snapshot_metadata saat checksum mismatch
 
-- [] Optimize N+1 queries untuk load rules (flags list)
-- [] Optimize DB queries: join flags + rules batch load per scope
-- [] Cache invalidation: invalidate `ScopedFlagCache` by scope on outbox events
+- [x] Optimize N+1 queries untuk load rules (flags list)
+- [x] Optimize DB queries: batch load rules per scope
+- [x] Cache invalidation: invalidate `ScopedFlagCache` by scope after local flag mutations
+- [x] Cache invalidation: invalidate `ScopedFlagCache` by scope on outbox events
 
-- [] Observability metrics (outbox lag, publish retry count, evaluation latency)
-- [] Metrics: outbox pending count, retry count, publish latency, dispatcher loop lag
-- [] Tracing/logging: include correlationId in dispatcher logs + publish errors
+- [x] Observability metrics documentation (`docs/metrics.md`)
+- [x] Observability metrics (outbox lag, publish retry count, evaluation latency)
+- [x] Metrics: publish attempts/success/failure, publish latency, evaluate latency + degraded/circuit counters
+- [x] Tracing/logging: include correlationId in dispatcher logs + publish errors
 - [] Alert signals: DB failover activation, cache degradation, file corruption, broker publish failures
 

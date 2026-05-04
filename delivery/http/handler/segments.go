@@ -109,4 +109,3 @@ func (h *SegmentsHandler) Delete(c *gin.Context) {
 	}
 	c.Status(http.StatusNoContent)
 }
-

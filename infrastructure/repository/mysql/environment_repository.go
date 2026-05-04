@@ -95,4 +95,3 @@ WHERE project_id = ? AND ` + "`key`" + ` = ? AND deleted_at IS NULL`
 	}
 	return &e, nil
 }
-

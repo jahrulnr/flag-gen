@@ -58,4 +58,3 @@ func (h *EnvironmentsHandler) Create(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, gin.H{"environment": out, "correlationId": response.CorrelationID(c)})
 }
-

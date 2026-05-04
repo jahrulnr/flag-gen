@@ -1,0 +1,35 @@
+openapi: 3.0.3
+info:
+  title: Flag Gen API
+  version: 0.1.0
+servers:
+  - url: http://localhost:8080/v1
+paths:
+  /system/status:
+    get:
+      summary: Database and app lifecycle status
+  /system/install:
+    post:
+      summary: Bootstrap empty database
+  /system/migrate:
+    post:
+      summary: Apply pending migrations (dev-gated)
+  /projects:
+    get:
+      summary: List projects
+    post:
+      summary: Create project
+  /projects/{projectId}/environments/{environmentKey}/flags/evaluate:
+    get:
+      summary: Evaluate single flag (query flagKey, userId)
+    post:
+      summary: Evaluate multiple flags
+  /public/projects/{projectId}/environments/{environmentKey}/flags:
+    get:
+      summary: Public read-only flag list
+      parameters:
+        - in: header
+          name: X-Public-Api-Key
+          schema:
+            type: string
+          required: false

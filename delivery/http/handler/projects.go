@@ -54,4 +54,3 @@ func (h *ProjectsHandler) Create(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, gin.H{"project": out, "correlationId": response.CorrelationID(c)})
 }
-

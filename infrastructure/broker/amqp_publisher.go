@@ -105,4 +105,3 @@ func (p *AMQPPublisher) Publish(ctx context.Context, routingKey string, body []b
 		},
 	)
 }
-

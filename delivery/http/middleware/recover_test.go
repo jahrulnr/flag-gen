@@ -33,4 +33,3 @@ func TestRecoverMiddleware(t *testing.T) {
 	require.NotEmpty(t, body["message"])
 	require.NotEmpty(t, body["timestamp"])
 }
-

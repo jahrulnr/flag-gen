@@ -23,4 +23,3 @@ func (u *ListFlagsUsecase) Execute(ctx context.Context, scope valueobject.Scope)
 	}
 	return u.flags.ListByScope(ctx, scope)
 }
-

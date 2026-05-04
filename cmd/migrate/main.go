@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"flag-gen/infrastructure/config"
+	"flag-gen/infrastructure/migrate"
 	mysqlrepo "flag-gen/infrastructure/repository/mysql"
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -25,20 +25,28 @@ func main() {
 		log.Fatalf("failed to connect mysql: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 	if err := db.Ping(ctx); err != nil {
 		log.Fatalf("failed to ping mysql: %v", err)
 	}
 
-	migrationsDir := filepath.Join("migrations", "mysql")
+	dir := cfg.MigrationsDir
 	if v := os.Getenv("MIGRATIONS_DIR"); v != "" {
-		migrationsDir = v
+		dir = v
 	}
 
-	// MVP migration runner entrypoint.
-	// Intentionally minimal: lays down future-compatible structure and an explicit binary.
-	fmt.Printf("migrate binary ready. mysql migrations dir: %s\n", migrationsDir)
-	fmt.Println("TODO: implement SQL migration execution + schema_migrations tracking.")
+	m := migrate.NewMigrator(db.SQL(), dir)
+	applied, err := m.ApplyAllPending(ctx, migrate.AppVersion)
+	if err != nil {
+		log.Fatalf("migrate failed: %v", err)
+	}
+	if len(applied) == 0 {
+		fmt.Println("No pending migrations.")
+		return
+	}
+	fmt.Printf("Applied %d migration(s):\n", len(applied))
+	for _, f := range applied {
+		fmt.Printf("  - %d %s\n", f.Version, f.Name)
+	}
 }
-

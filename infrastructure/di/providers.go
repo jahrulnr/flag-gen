@@ -1,13 +1,17 @@
 package di
 
 import (
+	"flag-gen/application/usecase"
 	"flag-gen/domain/repository"
+	"flag-gen/infrastructure/broadcast"
 	"flag-gen/infrastructure/broker"
 	"flag-gen/infrastructure/cache"
 	"flag-gen/infrastructure/config"
 	"flag-gen/infrastructure/outbox"
 	mysqlrepo "flag-gen/infrastructure/repository/mysql"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 func ProvideConfig() (config.Config, error) {
@@ -16,6 +20,10 @@ func ProvideConfig() (config.Config, error) {
 
 func ProvideMySQLDB(cfg config.Config) (*mysqlrepo.DB, error) {
 	return mysqlrepo.NewDB(cfg.MySQL.DSN)
+}
+
+func ProvideSystemService(db *mysqlrepo.DB, cfg config.Config) *usecase.SystemService {
+	return usecase.NewSystemService(db.SQL(), cfg)
 }
 
 func ProvideFlagRepository(db *mysqlrepo.DB) repository.FlagRepository {
@@ -66,6 +74,8 @@ func ProvideOutboxDispatcher(cfg config.Config, outboxRepo repository.OutboxRepo
 
 func ProvideApplicationState(
 	cfg config.Config,
+	db *mysqlrepo.DB,
+	redisClient redis.UniversalClient,
 	projects repository.ProjectRepository,
 	envs repository.EnvironmentRepository,
 	segments repository.SegmentRepository,
@@ -76,18 +86,30 @@ func ProvideApplicationState(
 	scopedFlags *cache.ScopedFlagCache,
 	pub *broker.AMQPPublisher,
 	dispatcher *outbox.Dispatcher,
+	system *usecase.SystemService,
+	snapPtr *usecase.SnapshotPointer,
+	admin repository.AdminReadRepository,
+	hub *broadcast.Hub,
+	sf *cache.Singleflight,
 ) *ApplicationState {
 	return &ApplicationState{
-		Config:      cfg,
-		Projects:    projects,
-		Environments: envs,
-		Segments:    segments,
-		Idempotency: idem,
-		Flags:       flags,
-		Outbox:      outbox,
-		Snapshots:   snapshots,
-		ScopedFlags: scopedFlags,
-		AMQPPublisher: pub,
+		Config:           cfg,
+		MySQL:            db,
+		Redis:            redisClient,
+		Projects:         projects,
+		Environments:     envs,
+		Segments:         segments,
+		Idempotency:      idem,
+		Flags:            flags,
+		Outbox:           outbox,
+		Snapshots:        snapshots,
+		ScopedFlags:      scopedFlags,
+		Singleflight:     sf,
+		AMQPPublisher:    pub,
 		OutboxDispatcher: dispatcher,
+		System:           system,
+		SnapshotPointer:  snapPtr,
+		AdminRead:        admin,
+		BroadcastHub:     hub,
 	}
 }

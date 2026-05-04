@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"time"
 
 	"flag-gen/domain/entity"
 	"flag-gen/domain/repository"
+	"flag-gen/infrastructure/metrics"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -50,10 +52,10 @@ func NewDispatcher(workerID string, batch int, interval time.Duration, lockFor t
 		timeout = 5 * time.Second
 	}
 	return &Dispatcher{
-		workerID:  workerID,
-		batch:     batch,
-		interval:  interval,
-		lockFor:   lockFor,
+		workerID:   workerID,
+		batch:      batch,
+		interval:   interval,
+		lockFor:    lockFor,
 		outboxRepo: outboxRepo,
 		publisher:  publisher,
 		exchange:   exchange,
@@ -80,12 +82,20 @@ func (d *Dispatcher) tick(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	metrics.Inc("outbox_claimed_events_total", int64(len(events)))
 	for _, e := range events {
+		metrics.Inc("outbox_publish_attempts_total", 1)
+		t0 := time.Now()
 		if err := d.publishOne(ctx, e); err != nil {
+			metrics.Inc("outbox_publish_failures_total", 1)
+			log.Printf("outbox publish failed event_id=%s aggregate=%s:%s correlation=%s err=%v",
+				e.ID, e.AggregateType, e.AggregateID, correlationFromPayload(e.Payload), err)
 			next := time.Now().UTC().Add(backoffDuration(e.RetryCount + 1))
 			_ = d.outboxRepo.MarkFailed(ctx, e.ID, err.Error(), &next)
 			continue
 		}
+		metrics.Inc("outbox_publish_success_total", 1)
+		metrics.AddLatencySample("outbox_publish", float64(time.Since(t0).Milliseconds()))
 		_ = d.outboxRepo.MarkPublished(ctx, e.ID)
 	}
 	return nil
@@ -118,6 +128,17 @@ func (d *Dispatcher) publishOne(ctx context.Context, e entity.OutboxEvent) error
 	return d.publisher.Publish(ctx, e.EventType, e.Payload, headers, d.timeout)
 }
 
+func correlationFromPayload(payload []byte) string {
+	var payloadMap map[string]any
+	if err := json.Unmarshal(payload, &payloadMap); err != nil {
+		return ""
+	}
+	if v, ok := payloadMap["correlationId"].(string); ok {
+		return v
+	}
+	return ""
+}
+
 func backoffDuration(attempt int) time.Duration {
 	// Exponential backoff with cap. attempt starts at 1.
 	if attempt < 1 {
@@ -141,4 +162,3 @@ func backoffDuration(attempt int) time.Duration {
 	}
 	return d
 }
-

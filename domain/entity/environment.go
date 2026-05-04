@@ -14,4 +14,3 @@ type Environment struct {
 	UpdatedAt time.Time
 	DeletedAt *time.Time
 }
-

@@ -115,3 +115,42 @@ ON DUPLICATE KEY UPDATE
 	}
 	return nil
 }
+
+func (r *SnapshotMetadataRepository) MarkInvalidByScope(ctx context.Context, scope valueobject.Scope) error {
+	const q = `
+UPDATE snapshot_metadata sm
+JOIN environments e ON e.id = sm.environment_id
+SET sm.status = 'invalid', sm.last_validated_at = UTC_TIMESTAMP(3)
+WHERE sm.project_id = ? AND e.` + "`key`" + ` = ?`
+
+	if _, err := r.db.ExecContext(ctx, q, scope.ProjectID, scope.EnvironmentKey); err != nil {
+		return apperror.NewInfrastructureError("DB", "snapshot metadata mark invalid failed", err)
+	}
+	return nil
+}
+
+func (r *SnapshotMetadataRepository) ListScopes(ctx context.Context) ([]valueobject.Scope, error) {
+	const q = `
+SELECT sm.project_id, e.` + "`key`" + `
+FROM snapshot_metadata sm
+JOIN environments e ON e.id = sm.environment_id`
+
+	rows, err := r.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, apperror.NewInfrastructureError("DB", "snapshot metadata list scopes failed", err)
+	}
+	defer rows.Close()
+
+	var out []valueobject.Scope
+	for rows.Next() {
+		var s valueobject.Scope
+		if err := rows.Scan(&s.ProjectID, &s.EnvironmentKey); err != nil {
+			return nil, apperror.NewInfrastructureError("DB", "snapshot metadata list scopes scan failed", err)
+		}
+		out = append(out, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, apperror.NewInfrastructureError("DB", "snapshot metadata list scopes rows failed", err)
+	}
+	return out, nil
+}

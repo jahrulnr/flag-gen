@@ -37,8 +37,19 @@ func (u *EvaluateFlagsUsecase) Execute(ctx context.Context, scope valueobject.Sc
 
 	out := make(map[string]valueobject.EvaluationResult, len(flagKeys))
 	for _, k := range flagKeys {
+		if u.scopedFlags.IsFlagNegativelyCached(scope, k) {
+			out[k] = valueobject.EvaluationResult{
+				FlagKey: k,
+				Value:   false,
+				Version: 0,
+				Reason:  valueobject.ReasonNotFound,
+				Source:  valueobject.SourceCache,
+			}
+			continue
+		}
 		f, ok := byKey[k]
 		if !ok {
+			u.scopedFlags.MarkFlagMissing(scope, k)
 			out[k] = valueobject.EvaluationResult{
 				FlagKey: k,
 				Value:   false,
@@ -160,4 +171,3 @@ func contains(container any, item any) bool {
 	}
 	return false
 }
-

@@ -43,4 +43,3 @@ func AbortError(c *gin.Context, code int, errCode string, message string, detail
 func AbortInternal(c *gin.Context, message string, timestamp string) {
 	AbortError(c, http.StatusInternalServerError, "internal_error", message, nil, timestamp)
 }
-

@@ -17,9 +17,10 @@ func NewWriter(dir string) *Writer {
 
 // WriteAtomic writes the snapshot file atomically using temp + rename.
 // It computes checksum over canonical payload (excluding checksum field).
-func (w *Writer) WriteAtomic(projectID, environmentKey string, scopeVersion int, flags any) (string, error) {
+// Returns final file path and the hex checksum written into the file.
+func (w *Writer) WriteAtomic(projectID, environmentKey string, scopeVersion int, flags any) (string, string, error) {
 	if err := os.MkdirAll(w.dir, 0o755); err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	f := File{
@@ -37,13 +38,13 @@ func (w *Writer) WriteAtomic(projectID, environmentKey string, scopeVersion int,
 
 	hex, err := computeChecksumHex(f)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	f.Checksum.Hex = hex
 
 	out, err := json.MarshalIndent(f, "", "  ")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	out = append(out, '\n')
 
@@ -52,22 +53,22 @@ func (w *Writer) WriteAtomic(projectID, environmentKey string, scopeVersion int,
 
 	tf, err := os.OpenFile(tmpPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer tf.Close()
 
 	if _, err := tf.Write(out); err != nil {
-		return "", err
+		return "", "", err
 	}
 	if err := tf.Sync(); err != nil {
-		return "", err
+		return "", "", err
 	}
 	if err := tf.Close(); err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	if err := os.Rename(tmpPath, finalPath); err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	// Best-effort fsync dir for durability (ignore if unsupported).
@@ -76,6 +77,5 @@ func (w *Writer) WriteAtomic(projectID, environmentKey string, scopeVersion int,
 		_ = df.Close()
 	}
 
-	return finalPath, nil
+	return finalPath, hex, nil
 }
-

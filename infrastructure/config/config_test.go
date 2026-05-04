@@ -52,4 +52,3 @@ func TestLoad_RedisClusterConfig(t *testing.T) {
 	require.Equal(t, []string{"a:6379", "b:6379"}, cfg.Redis.Addrs)
 	require.True(t, cfg.Redis.ForceCluster)
 }
-

@@ -47,6 +47,8 @@ func classifyAppError(err apperror.IAppError) string {
 		return "dependency_error"
 	case apperror.StatusServiceUnavailable:
 		return "degraded"
+	case apperror.StatusLocked:
+		return "locked"
 	default:
 		if err.StatusCode() >= 400 && err.StatusCode() <= 499 {
 			return "bad_request"
@@ -61,4 +63,3 @@ func mapDetails(err apperror.IAppError) interface{} {
 		"calledAt": err.CalledAt(),
 	}
 }
-

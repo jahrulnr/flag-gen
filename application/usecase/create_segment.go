@@ -25,4 +25,3 @@ func (u *CreateSegmentUsecase) Execute(ctx context.Context, s entity.Segment) (e
 	}
 	return u.segments.Create(ctx, s)
 }
-

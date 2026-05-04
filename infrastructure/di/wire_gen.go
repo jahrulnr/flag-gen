@@ -33,9 +33,19 @@ func InitializeApplication() (*ApplicationState, error) {
 	l2 := ProvideL2(universalClient)
 	singleflight := ProvideSingleflight()
 	reader := ProvideSnapshotReader(config)
-	scopedFlagCache := ProvideScopedFlagCache(l1, l2, singleflight, flagRepository, reader)
+	degradedBreaker := ProvideDegradedBreaker()
+	negativeFlagCache, err := ProvideNegativeFlagCache()
+	if err != nil {
+		return nil, err
+	}
+	scopedFlagCache := ProvideScopedFlagCache(l1, l2, singleflight, flagRepository, reader, snapshotMetadataRepository, degradedBreaker, negativeFlagCache)
 	amqpPublisher := ProvideAMQPPublisher(config)
 	dispatcher := ProvideOutboxDispatcher(config, outboxRepository, amqpPublisher)
-	applicationState := ProvideApplicationState(config, projectRepository, environmentRepository, segmentRepository, idempotencyRepository, flagRepository, outboxRepository, snapshotMetadataRepository, scopedFlagCache, amqpPublisher, dispatcher)
+	systemService := ProvideSystemService(db, config)
+	writer := ProvideSnapshotWriter(config)
+	snapshotPointer := ProvideSnapshotPointer(flagRepository, environmentRepository, snapshotMetadataRepository, writer, scopedFlagCache)
+	adminReadRepository := ProvideAdminReadRepository(db)
+	hub := ProvideBroadcastHub()
+	applicationState := ProvideApplicationState(config, db, universalClient, projectRepository, environmentRepository, segmentRepository, idempotencyRepository, flagRepository, outboxRepository, snapshotMetadataRepository, scopedFlagCache, amqpPublisher, dispatcher, systemService, snapshotPointer, adminReadRepository, hub, singleflight)
 	return applicationState, nil
 }

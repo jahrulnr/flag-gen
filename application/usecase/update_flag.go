@@ -11,10 +11,11 @@ import (
 
 type UpdateFlagUsecase struct {
 	flags repository.FlagRepository
+	snap  *SnapshotPointer
 }
 
-func NewUpdateFlagUsecase(flags repository.FlagRepository) *UpdateFlagUsecase {
-	return &UpdateFlagUsecase{flags: flags}
+func NewUpdateFlagUsecase(flags repository.FlagRepository, snap *SnapshotPointer) *UpdateFlagUsecase {
+	return &UpdateFlagUsecase{flags: flags, snap: snap}
 }
 
 func (u *UpdateFlagUsecase) Execute(ctx context.Context, scope valueobject.Scope, f entity.Flag) (entity.Flag, error) {
@@ -27,6 +28,9 @@ func (u *UpdateFlagUsecase) Execute(ctx context.Context, scope valueobject.Scope
 	if f.Version <= 0 {
 		return entity.Flag{}, apperror.NewValidationError(apperror.ValidationError, "missing or invalid version", nil)
 	}
-	return u.flags.Update(ctx, scope, f)
+	out, err := u.flags.Update(ctx, scope, f)
+	if err == nil && u.snap != nil {
+		u.snap.AfterFlagMutation(ctx, scope)
+	}
+	return out, err
 }
-

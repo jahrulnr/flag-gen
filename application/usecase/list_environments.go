@@ -22,4 +22,3 @@ func (u *ListEnvironmentsUsecase) Execute(ctx context.Context, projectID string)
 	}
 	return u.envs.ListByProject(ctx, projectID)
 }
-

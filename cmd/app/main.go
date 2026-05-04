@@ -10,8 +10,10 @@ import (
 	"syscall"
 	"time"
 
+	"flag-gen/application/jobs"
 	deliveryhttp "flag-gen/delivery/http"
 	"flag-gen/delivery/http/middleware"
+	"flag-gen/infrastructure/broker"
 	"flag-gen/infrastructure/di"
 
 	"github.com/SALT-Indonesia/salt-pkg/logmanager"
@@ -76,6 +78,7 @@ func main() {
 	router.Use(lmgin.Middleware(appLog))
 	router.Use(middleware.CorrelationIDMiddleware())
 	router.Use(middleware.RecoverMiddleware())
+	router.Use(middleware.MigrationGate(app.System))
 
 	// Register routes
 	router.GET("/health", func(ctx *gin.Context) {
@@ -103,6 +106,20 @@ func main() {
 		go func() {
 			_ = app.OutboxDispatcher.Run(context.Background())
 		}()
+	}
+
+	if app.Config.BroadcastConsumerEnabled && app.Config.RabbitMQ.AMQPURL != "" && app.BroadcastHub != nil {
+		go broker.DialBackoff(context.Background(), app.Config.RabbitMQ.AMQPURL, app.Config.RabbitMQ.ExchangeName, app.BroadcastHub, app.ScopedFlags)
+	}
+
+	if app.MySQL != nil && app.Config.CleanupIntervalSeconds > 0 && app.Config.SoftDeleteRetentionDays > 0 {
+		ret := time.Duration(app.Config.SoftDeleteRetentionDays) * 24 * time.Hour
+		iv := time.Duration(app.Config.CleanupIntervalSeconds) * time.Second
+		go jobs.StartSoftDeleteCleanup(context.Background(), app.MySQL.SQL(), app.Redis, iv, ret, app.Config.CleanupLockTTL, app.Config.CleanupPruneMaxPerScope)
+	}
+
+	if app.Config.Snapshot.SchedulerEnabled && app.SnapshotPointer != nil && app.Snapshots != nil && app.Singleflight != nil {
+		go jobs.StartSnapshotConsistencyScheduler(context.Background(), app.Config, app.Redis, app.Snapshots, app.SnapshotPointer, app.Singleflight)
 	}
 
 	if app.Config.TLS.Enabled {

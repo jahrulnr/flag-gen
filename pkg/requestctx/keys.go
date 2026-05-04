@@ -6,4 +6,3 @@ type ctxKey string
 const (
 	CorrelationIDKey ctxKey = "correlationId"
 )
-

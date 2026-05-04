@@ -31,27 +31,26 @@ func (r *Reader) ReadValidated(projectID, environmentKey string) (File, []byte, 
 
 	var f File
 	if err := json.Unmarshal(b, &f); err != nil {
-		return File{}, nil, fmt.Errorf("invalid snapshot json: %w", err)
+		return File{}, b, fmt.Errorf("invalid snapshot json: %w", err)
 	}
 
 	if f.FormatVersion != FileFormatVersion {
-		return File{}, nil, fmt.Errorf("unsupported snapshot formatVersion=%d", f.FormatVersion)
+		return File{}, b, fmt.Errorf("unsupported snapshot formatVersion=%d", f.FormatVersion)
 	}
 	if f.ProjectID != projectID || f.EnvironmentKey != environmentKey {
-		return File{}, nil, fmt.Errorf("snapshot scope mismatch")
+		return File{}, b, fmt.Errorf("snapshot scope mismatch")
 	}
 	if f.Checksum.Algo != "sha256" || f.Checksum.Covers != "canonicalPayload" {
-		return File{}, nil, fmt.Errorf("invalid snapshot checksum metadata")
+		return File{}, b, fmt.Errorf("invalid snapshot checksum metadata")
 	}
 
 	want, err := computeChecksumHex(f)
 	if err != nil {
-		return File{}, nil, fmt.Errorf("checksum compute failed: %w", err)
+		return File{}, b, fmt.Errorf("checksum compute failed: %w", err)
 	}
 	if f.Checksum.Hex != want {
-		return File{}, nil, fmt.Errorf("snapshot checksum mismatch")
+		return File{}, b, ErrChecksumMismatch
 	}
 
 	return f, b, nil
 }
-

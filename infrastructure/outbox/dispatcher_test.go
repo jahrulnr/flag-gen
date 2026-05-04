@@ -15,14 +15,16 @@ import (
 )
 
 type fakeOutboxRepo struct {
-	events []entity.OutboxEvent
+	events  []entity.OutboxEvent
 	claimed bool
 
 	published []string
 	failed    []string
 }
 
-func (f *fakeOutboxRepo) ListPending(context.Context, int) ([]entity.OutboxEvent, error) { return nil, errors.New("unused") }
+func (f *fakeOutboxRepo) ListPending(context.Context, int) ([]entity.OutboxEvent, error) {
+	return nil, errors.New("unused")
+}
 
 func (f *fakeOutboxRepo) ClaimNext(ctx context.Context, workerID string, limit int, lockFor time.Duration) ([]entity.OutboxEvent, error) {
 	_ = ctx
@@ -91,4 +93,3 @@ func TestDispatcher_Tick_MarkFailedOnError(t *testing.T) {
 	require.Empty(t, repo.published)
 	require.Equal(t, []string{"e1"}, repo.failed)
 }
-

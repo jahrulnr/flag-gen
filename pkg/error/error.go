@@ -18,6 +18,7 @@ const (
 	StatusConflict            = 409
 	StatusUnprocessableEntity = 422
 	StatusTooManyRequests     = 429
+	StatusLocked              = 423
 
 	// 5xx Server Error
 	StatusInternalServerError = 500

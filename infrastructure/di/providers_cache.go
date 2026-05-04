@@ -6,6 +6,7 @@ import (
 	"flag-gen/infrastructure/cache"
 	"flag-gen/infrastructure/config"
 	"flag-gen/infrastructure/snapshot"
+	"time"
 
 	"github.com/dgraph-io/ristretto/v2"
 	"github.com/redis/go-redis/v9"
@@ -56,6 +57,23 @@ func ProvideSnapshotReader(cfg config.Config) *snapshot.Reader {
 	return snapshot.NewReader(cfg.Snapshot.Dir)
 }
 
-func ProvideScopedFlagCache(l1 cache.L1, l2 cache.L2, sf *cache.Singleflight, flags repository.FlagRepository, snapReader *snapshot.Reader) *cache.ScopedFlagCache {
-	return cache.NewScopedFlagCache(l1, l2, sf, flags, snapReader)
+func ProvideDegradedBreaker() *cache.DegradedBreaker {
+	return cache.NewDegradedBreaker(5, 45*time.Second)
+}
+
+func ProvideNegativeFlagCache() (*cache.NegativeFlagCache, error) {
+	return cache.NewNegativeFlagCache()
+}
+
+func ProvideScopedFlagCache(
+	l1 cache.L1,
+	l2 cache.L2,
+	sf *cache.Singleflight,
+	flags repository.FlagRepository,
+	snapReader *snapshot.Reader,
+	snapMeta repository.SnapshotMetadataRepository,
+	br *cache.DegradedBreaker,
+	neg *cache.NegativeFlagCache,
+) *cache.ScopedFlagCache {
+	return cache.NewScopedFlagCache(l1, l2, sf, flags, snapReader, snapMeta, br, neg)
 }

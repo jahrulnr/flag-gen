@@ -23,4 +23,3 @@ func BucketMatch(projectID, environmentKey, flagKey, stickinessValue string, per
 	bucket := float64(n%10000) / 100.0
 	return bucket < percentage
 }
-

@@ -37,4 +37,3 @@ type EvaluationResult struct {
 	MatchedRuleID *string
 	Source        EvaluationSource
 }
-

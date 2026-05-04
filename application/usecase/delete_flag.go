@@ -10,10 +10,11 @@ import (
 
 type DeleteFlagUsecase struct {
 	flags repository.FlagRepository
+	snap  *SnapshotPointer
 }
 
-func NewDeleteFlagUsecase(flags repository.FlagRepository) *DeleteFlagUsecase {
-	return &DeleteFlagUsecase{flags: flags}
+func NewDeleteFlagUsecase(flags repository.FlagRepository, snap *SnapshotPointer) *DeleteFlagUsecase {
+	return &DeleteFlagUsecase{flags: flags, snap: snap}
 }
 
 func (u *DeleteFlagUsecase) Execute(ctx context.Context, scope valueobject.Scope, flagID string, expectedVersion int) error {
@@ -23,6 +24,9 @@ func (u *DeleteFlagUsecase) Execute(ctx context.Context, scope valueobject.Scope
 	if flagID == "" || expectedVersion <= 0 {
 		return apperror.NewValidationError(apperror.ValidationError, "missing identifiers", nil)
 	}
-	return u.flags.SoftDelete(ctx, scope, flagID, expectedVersion)
+	err := u.flags.SoftDelete(ctx, scope, flagID, expectedVersion)
+	if err == nil && u.snap != nil {
+		u.snap.AfterFlagMutation(ctx, scope)
+	}
+	return err
 }
-

@@ -18,4 +18,3 @@ func NewListProjectsUsecase(projects repository.ProjectRepository) *ListProjects
 func (u *ListProjectsUsecase) Execute(ctx context.Context) ([]entity.Project, error) {
 	return u.projects.List(ctx)
 }
-

@@ -143,4 +143,3 @@ func newUUIDLike(seed string, t time.Time) string {
 	// 32 chars (like UUID without dashes) is enough for CHAR(36) fields in dev-mode.
 	return hexed[:32]
 }
-
