@@ -4,7 +4,7 @@
 </button>
 
 <div *ngIf="wiki.isOpen()" class="wiki-layer" role="presentation">
-  <button type="button" class="wiki-backdrop" aria-label="Close wiki" (click)="close()"></button>
+  <div class="wiki-backdrop" tabindex="-1" aria-hidden="true" (click)="close()"></div>
 
   <aside #drawer class="wiki-drawer" role="dialog" aria-modal="true" [attr.aria-labelledby]="'wiki-title-' + wiki.activeContent().id">
     <header class="wiki-drawer__header">

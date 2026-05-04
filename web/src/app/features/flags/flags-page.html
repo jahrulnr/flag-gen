@@ -1,7 +1,7 @@
 <section class="page">
   <header>
     <div>
-      <p class="eyebrow">{{ projectId() }} / {{ environmentKey() }}</p>
+      <p class="eyebrow">{{ flagsEyebrow() }}</p>
       <h1>Flags</h1>
     </div>
     <div class="page-actions">
@@ -13,7 +13,11 @@
     </div>
   </header>
 
-  <p *ngIf="error()" class="error">{{ error() }}</p>
+  <app-inline-api-error [message]="error()" [reference]="errorRef()" />
+
+  <div *ngIf="form.id" class="flag-edit-banner" role="status">
+    Editing flag <strong>{{ form.key }}</strong>. Submit saves changes to this flag; leave the Key field unchanged unless you intend to migrate keys server-side.
+  </div>
 
   <form (ngSubmit)="form.id ? update() : create()" class="form wide">
     <label class="field">
@@ -29,23 +33,30 @@
       <input name="description" placeholder="What this flag controls" [(ngModel)]="form.description" />
     </label>
     <label class="field field--check">
-      <span>Enabled</span>
       <input name="enabled" type="checkbox" [(ngModel)]="form.enabled" />
+      <span>Enabled</span>
     </label>
     <label class="field field--check">
-      <span>Client-side</span>
       <input name="clientSide" type="checkbox" [(ngModel)]="form.clientSide" />
+      <span>Client-side</span>
     </label>
     <label class="field">
       Value type
-      <select name="valueType" [(ngModel)]="form.valueType">
+      <select name="valueType" [(ngModel)]="form.valueType" (ngModelChange)="onValueTypeChange()">
         <option value="boolean">Boolean</option>
         <option value="json">JSON</option>
       </select>
     </label>
-    <label class="field">
+    <label class="field" *ngIf="form.valueType === 'boolean'">
       Default value
-      <input name="defaultValue" placeholder="e.g. false" [(ngModel)]="form.defaultValue" />
+      <select name="defaultBool" [(ngModel)]="form.defaultValue">
+        <option value="false">False</option>
+        <option value="true">True</option>
+      </select>
+    </label>
+    <label class="field" *ngIf="form.valueType !== 'boolean'">
+      Default value
+      <input name="defaultValue" placeholder="JSON literal" [(ngModel)]="form.defaultValue" />
     </label>
     <label class="field">
       Rollout %
@@ -57,7 +68,7 @@
     </label>
     <label class="field field--full">
       Rules JSON
-      <small class="hint">Targeting rules array (JSON). Leave as [] if none.</small>
+      <small class="hint">Must be valid JSON array. Invalid JSON will be rejected by the API.</small>
       <textarea name="rulesJson" [(ngModel)]="form.rulesJson" rows="4" placeholder='e.g. []'></textarea>
     </label>
     <button type="submit" class="btn btn--primary">
@@ -90,4 +101,6 @@
       </div>
     </article>
   </div>
+
+  <app-destructive-confirm-dialog />
 </section>

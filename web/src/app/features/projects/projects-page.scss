@@ -52,7 +52,7 @@ p {
   font-weight: 500;
 }
 
-input {
+input:not([type='checkbox']) {
   background: rgb(15 23 42 / 86%);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
@@ -61,11 +61,11 @@ input {
   padding: 0.65rem 0.75rem;
 }
 
-input::placeholder {
+input:not([type='checkbox'])::placeholder {
   color: rgb(148 163 184 / 72%);
 }
 
-input:focus {
+input:not([type='checkbox']):focus {
   border-color: rgb(52 211 153 / 52%);
   box-shadow: var(--focus-ring);
   outline: 0;
@@ -192,6 +192,27 @@ a.btn {
   display: block;
   font-size: 0.98rem;
   letter-spacing: -0.01em;
+}
+
+.list-row__meta {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0;
+}
+
+.list-meta__term {
+  color: var(--fg-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.list-row__meta code {
+  display: inline;
+  margin-top: 0;
 }
 
 code {

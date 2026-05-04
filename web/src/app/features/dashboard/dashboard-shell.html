@@ -13,6 +13,7 @@
             routerLink="/dashboard/projects"
             routerLinkActive="is-active"
             [routerLinkActiveOptions]="{ exact: true }"
+            aria-label="Workspace root; open projects overview"
           >
             <i class="fa-solid fa-folder-tree" aria-hidden="true"></i>
             <span>Projects</span>
@@ -60,35 +61,67 @@
       <div class="topbar__left">
         <strong>Admin dashboard</strong>
         <nav class="breadcrumb" aria-label="Breadcrumb">
-          <a routerLink="/dashboard/projects">Projects</a>
-          <ng-container *ngIf="selectedProjectId() as pid">
+          <ng-container *ngIf="isAuditRoute(); else workspaceBread">
+            <span class="breadcrumb__system">System</span>
             <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
-            <a [routerLink]="['/dashboard/projects', pid, 'environments']">{{ projectTitle(pid) }}</a>
+            <span class="breadcrumb__here" aria-current="page">Audit</span>
           </ng-container>
-          <ng-container *ngIf="selectedProjectId() && isSegmentsArea()">
-            <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
-            <span class="breadcrumb__here">Segments</span>
-          </ng-container>
-          <ng-container *ngIf="selectedProjectId() && isEnvironmentsList() && !isSegmentsArea()">
-            <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
-            <span class="breadcrumb__here">Environments</span>
-          </ng-container>
-          <ng-container *ngIf="selectedEnvironmentKey() as ek">
-            <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
-            <a [routerLink]="['/dashboard/projects', selectedProjectId(), 'environments', ek, 'flags']">{{ ek }}</a>
-          </ng-container>
-          <ng-container *ngIf="selectedEnvironmentKey() && isFlagsArea() && !isFlagHistory()">
-            <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
-            <span class="breadcrumb__here">Flags</span>
-          </ng-container>
-          <ng-container *ngIf="isFlagHistory()">
-            <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
-            <span class="breadcrumb__here">History</span>
-          </ng-container>
-          <ng-container *ngIf="routerUrl().includes('/dashboard/audit')">
-            <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
-            <span class="breadcrumb__here">Audit</span>
-          </ng-container>
+
+          <ng-template #workspaceBread>
+            <a
+              routerLink="/dashboard/projects"
+              [attr.aria-current]="isProjectsListCurrent() ? 'page' : null"
+              aria-label="Projects list"
+              >All projects</a
+            >
+            <ng-container *ngIf="selectedProjectId() as pid">
+              <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
+              <a [routerLink]="['/dashboard/projects', pid, 'environments']" [attr.aria-label]="'Project: ' + projectTitle(pid)">
+                {{ projectTitle(pid) }}
+                <span class="breadcrumb__tag" aria-hidden="true" *ngIf="projectEnvLabelCollides(pid, selectedEnvironmentKey())"
+                  >workspace</span
+                >
+              </a>
+            </ng-container>
+            <ng-container *ngIf="selectedProjectId() && isSegmentsArea()">
+              <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
+              <span class="breadcrumb__here">Segments</span>
+            </ng-container>
+            <ng-container *ngIf="selectedProjectId() && isEnvironmentsList() && !isSegmentsArea()">
+              <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
+              <span class="breadcrumb__here">Environments</span>
+            </ng-container>
+            <ng-container *ngIf="selectedEnvironmentKey() as ek">
+              <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
+              <a [routerLink]="['/dashboard/projects', selectedProjectId(), 'environments', ek, 'flags']" [attr.aria-label]="'Environment: ' + ek">
+                <span class="breadcrumb__sr-only">Environment&nbsp;</span>
+                {{ ek }}<span class="breadcrumb__tag" aria-hidden="true" *ngIf="projectEnvLabelCollides(selectedProjectId(), ek)">environment</span>
+              </a>
+            </ng-container>
+
+            <ng-container *ngIf="selectedEnvironmentKey() && isFlagsArea()">
+              <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
+              <ng-container *ngIf="isFlagHistory(); else flagsCrumbCurrent">
+                <a [routerLink]="['/dashboard/projects', selectedProjectId(), 'environments', selectedEnvironmentKey(), 'flags']">Flags</a>
+                <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
+                <ng-container *ngIf="historyFlagLabel() as hl; else flagCrumbFall">
+                  <a
+                    [routerLink]="['/dashboard/projects', selectedProjectId(), 'environments', selectedEnvironmentKey(), 'flags']"
+                    [attr.aria-label]="'Flag: ' + hl"
+                    >{{ hl }}</a
+                  >
+                </ng-container>
+                <ng-template #flagCrumbFall>
+                  <span class="breadcrumb__muted" aria-busy="true">…</span>
+                </ng-template>
+                <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
+                <span class="breadcrumb__here" aria-current="page">History</span>
+              </ng-container>
+              <ng-template #flagsCrumbCurrent>
+                <span class="breadcrumb__here" aria-current="page">Flags</span>
+              </ng-template>
+            </ng-container>
+          </ng-template>
         </nav>
       </div>
       <div class="topbar__right">

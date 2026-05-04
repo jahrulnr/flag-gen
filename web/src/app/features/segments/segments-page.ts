@@ -1,24 +1,32 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 
 import { ApiService } from '../../core/api.service';
 import { Segment, rowID, rowKey, rowName } from '../../core/models';
+import { applyApiFailureToSignals } from '../../core/user-facing-api-error';
+import { ProjectDirectoryService } from '../../core/project-directory.service';
+import { DestructiveConfirmDialogComponent } from '../../ui/destructive-confirm-dialog/destructive-confirm-dialog.component';
+import { InlineApiErrorComponent } from '../../ui/inline-api-error/inline-api-error.component';
 import { WikiButtonComponent } from '../../wiki/wiki-button.component';
 
 @Component({
   selector: 'app-segments-page',
-  imports: [CommonModule, FormsModule, WikiButtonComponent],
+  imports: [CommonModule, FormsModule, WikiButtonComponent, DestructiveConfirmDialogComponent, InlineApiErrorComponent],
   templateUrl: './segments-page.html',
   styleUrl: './segments-page.scss',
 })
 export class SegmentsPage implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly projectDirectory = inject(ProjectDirectoryService);
   private readonly route = inject(ActivatedRoute);
   readonly projectId = signal('');
   readonly segments = signal<Segment[]>([]);
   readonly error = signal<string | null>(null);
+  readonly errorRef = signal<string | null>(null);
+  readonly destroyDialog = viewChild.required(DestructiveConfirmDialogComponent);
+
   form = this.defaultForm();
 
   ngOnInit(): void {
@@ -32,29 +40,35 @@ export class SegmentsPage implements OnInit {
     if (!this.projectId()) {
       return;
     }
+    this.error.set(null);
+    this.errorRef.set(null);
     this.api.get<{ segments: Segment[] }>(`/projects/${this.projectId()}/segments`).subscribe({
       next: (res) => this.segments.set(res.segments ?? []),
-      error: (err: { message?: string }) => this.error.set(err.message ?? 'Failed to load segments'),
+      error: (err: unknown) => applyApiFailureToSignals(this.error, this.errorRef, err, 'Failed to load segments'),
     });
   }
 
   create(): void {
+    this.error.set(null);
+    this.errorRef.set(null);
     this.api.post(`/projects/${this.projectId()}/segments`, this.payload()).subscribe({
       next: () => {
         this.form = this.defaultForm();
         this.reload();
       },
-      error: (err: { message?: string }) => this.error.set(err.message ?? 'Failed to create segment'),
+      error: (err: unknown) => applyApiFailureToSignals(this.error, this.errorRef, err, 'Failed to create segment'),
     });
   }
 
   update(): void {
+    this.error.set(null);
+    this.errorRef.set(null);
     this.api.patch(`/projects/${this.projectId()}/segments/${this.form.id}`, this.payload()).subscribe({
       next: () => {
         this.form = this.defaultForm();
         this.reload();
       },
-      error: (err: { message?: string }) => this.error.set(err.message ?? 'Failed to update segment'),
+      error: (err: unknown) => applyApiFailureToSignals(this.error, this.errorRef, err, 'Failed to update segment'),
     });
   }
 
@@ -68,9 +82,22 @@ export class SegmentsPage implements OnInit {
   }
 
   remove(segment: Segment): void {
-    this.api.delete(`/projects/${this.projectId()}/segments/${rowID(segment)}`).subscribe({
-      next: () => this.reload(),
-      error: (err: { message?: string }) => this.error.set(err.message ?? 'Failed to delete segment'),
+    const sid = rowID(segment);
+    const k = rowKey(segment);
+    const nm = rowName(segment);
+    this.destroyDialog().open({
+      title: 'Delete segment',
+      body: `Remove segment "${nm}" (${k}) from this project. Targeting rules that reference it may break until recreated.`,
+      expectedKey: k,
+      confirmLabel: 'Delete segment permanently',
+      onConfirm: () => {
+        this.error.set(null);
+        this.errorRef.set(null);
+        this.api.delete(`/projects/${this.projectId()}/segments/${sid}`).subscribe({
+          next: () => this.reload(),
+          error: (err: unknown) => applyApiFailureToSignals(this.error, this.errorRef, err, 'Failed to delete segment'),
+        });
+      },
     });
   }
 
@@ -80,6 +107,10 @@ export class SegmentsPage implements OnInit {
 
   name(segment: Segment): string {
     return rowName(segment);
+  }
+
+  projectLabel(): string {
+    return this.projectDirectory.displayName(this.projectId());
   }
 
   private payload(): Record<string, unknown> {

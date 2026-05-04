@@ -1,8 +1,11 @@
-<section class="page">
+<section class="page audit-page">
   <header>
     <div>
-      <p class="eyebrow">{{ flagId }}</p>
-      <h1>Flag history</h1>
+      <p class="eyebrow">Version timeline · {{ historyEyebrow() }}</p>
+      <h1>
+        Flag history
+        <span class="heading-subtitle" *ngIf="flagHeadingDetail() as det">{{ det }}</span>
+      </h1>
     </div>
     <div class="page-actions">
       <app-wiki-button wikiId="flag-history" />
@@ -13,22 +16,29 @@
     </div>
   </header>
 
-  <p *ngIf="error()" class="error">{{ error() }}</p>
+  <app-inline-api-error [message]="error()" [reference]="errorRef()" />
 
-  <table>
-    <thead>
-      <tr>
-        <th>Version</th>
-        <th>Change</th>
-        <th>Created</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let row of versions()">
-        <td>{{ row.version ?? row.Version }}</td>
-        <td>{{ row.changeType ?? row.ChangeType }}</td>
-        <td>{{ row.createdAt ?? row.CreatedAt }}</td>
-      </tr>
-    </tbody>
-  </table>
+  <div class="audit-table-wrap" *ngIf="versions().length > 0">
+    <table aria-label="Flag version history">
+      <thead>
+        <tr>
+          <th>Version</th>
+          <th>Change</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of versions()">
+          <td>{{ row.version ?? row.Version }}</td>
+          <td>{{ row.changeType ?? row.ChangeType }}</td>
+          <td>{{ formatTimestamp(row.createdAt ?? row.CreatedAt) }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div *ngIf="versions().length === 0 && !error()" class="audit-placeholder">
+    <strong>No versions yet</strong>
+    Updates to this flag will appear here once recorded.
+  </div>
 </section>

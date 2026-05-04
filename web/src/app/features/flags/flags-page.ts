@@ -1,21 +1,33 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { ApiService } from '../../core/api.service';
 import { Flag, rowID, rowKey, rowName } from '../../core/models';
+import { applyApiFailureToSignals } from '../../core/user-facing-api-error';
+import { ProjectDirectoryService } from '../../core/project-directory.service';
+import { DestructiveConfirmDialogComponent } from '../../ui/destructive-confirm-dialog/destructive-confirm-dialog.component';
+import { InlineApiErrorComponent } from '../../ui/inline-api-error/inline-api-error.component';
 import { WikiButtonComponent } from '../../wiki/wiki-button.component';
 import { RealtimeService } from '../realtime/realtime.service';
 
 @Component({
   selector: 'app-flags-page',
-  imports: [CommonModule, FormsModule, RouterLink, WikiButtonComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    WikiButtonComponent,
+    DestructiveConfirmDialogComponent,
+    InlineApiErrorComponent,
+  ],
   templateUrl: './flags-page.html',
   styleUrl: './flags-page.scss',
 })
 export class FlagsPage implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly projectDirectory = inject(ProjectDirectoryService);
   private readonly route = inject(ActivatedRoute);
   private readonly realtime = inject(RealtimeService);
 
@@ -23,6 +35,9 @@ export class FlagsPage implements OnInit {
   readonly environmentKey = signal('');
   readonly flags = signal<Flag[]>([]);
   readonly error = signal<string | null>(null);
+  readonly errorRef = signal<string | null>(null);
+
+  readonly destroyDialog = viewChild.required(DestructiveConfirmDialogComponent);
 
   form = this.defaultForm();
 
@@ -39,20 +54,24 @@ export class FlagsPage implements OnInit {
     if (!this.projectId() || !this.environmentKey()) {
       return;
     }
+    this.error.set(null);
+    this.errorRef.set(null);
     this.api.get<{ flags: Flag[] }>(this.flagsPath()).subscribe({
       next: (res) => this.flags.set(res.flags ?? []),
-      error: (err: { message?: string }) => this.error.set(err.message ?? 'Failed to load flags'),
+      error: (err: unknown) => applyApiFailureToSignals(this.error, this.errorRef, err, 'Failed to load flags'),
     });
   }
 
   create(): void {
     const body = this.toPayload();
+    this.error.set(null);
+    this.errorRef.set(null);
     this.api.post<{ flag: Flag }>(this.flagsPath(), body).subscribe({
       next: () => {
         this.form = this.defaultForm();
         this.reload();
       },
-      error: (err: { message?: string }) => this.error.set(err.message ?? 'Failed to create flag'),
+      error: (err: unknown) => applyApiFailureToSignals(this.error, this.errorRef, err, 'Failed to create flag'),
     });
   }
 
@@ -77,21 +96,35 @@ export class FlagsPage implements OnInit {
     if (!this.form.id) {
       return;
     }
+    this.error.set(null);
+    this.errorRef.set(null);
     this.api.patch<{ flag: Flag }>(`${this.flagsPath()}/${this.form.id}`, this.toPayload(true)).subscribe({
       next: () => {
         this.form = this.defaultForm();
         this.reload();
       },
-      error: (err: { message?: string }) => this.error.set(err.message ?? 'Failed to update flag'),
+      error: (err: unknown) => applyApiFailureToSignals(this.error, this.errorRef, err, 'Failed to update flag'),
     });
   }
 
   remove(flag: Flag): void {
     const id = rowID(flag);
     const version = flag.version ?? flag.Version ?? 1;
-    this.api.delete(`${this.flagsPath()}/${id}?version=${version}`).subscribe({
-      next: () => this.reload(),
-      error: (err: { message?: string }) => this.error.set(err.message ?? 'Failed to delete flag'),
+    const k = this.key(flag);
+    const displayName = this.name(flag);
+    this.destroyDialog().open({
+      title: 'Delete flag',
+      body: `Remove "${displayName}" (${k}) from environment "${this.environmentKey()}". Clients will stop receiving this configuration for that key.`,
+      expectedKey: k,
+      confirmLabel: 'Delete flag permanently',
+      onConfirm: () => {
+        this.error.set(null);
+        this.errorRef.set(null);
+        this.api.delete(`${this.flagsPath()}/${id}?version=${version}`).subscribe({
+          next: () => this.reload(),
+          error: (err: unknown) => applyApiFailureToSignals(this.error, this.errorRef, err, 'Failed to delete flag'),
+        });
+      },
     });
   }
 
@@ -109,6 +142,26 @@ export class FlagsPage implements OnInit {
 
   version(flag: Flag): number {
     return flag.version ?? flag.Version ?? 0;
+  }
+
+  projectLabel(): string {
+    return this.projectDirectory.displayName(this.projectId());
+  }
+
+  flagsEyebrow(): string {
+    const p = this.projectLabel().trim();
+    const env = this.environmentKey().trim();
+    if (p === env) {
+      return `Project and environment share the label “${p}”`;
+    }
+    return `Proj. ${p} · Env ${env}`;
+  }
+
+  onValueTypeChange(): void {
+    if (this.form.valueType === 'boolean') {
+      const raw = String(this.form.defaultValue).trim().toLowerCase();
+      this.form.defaultValue = raw === 'true' ? 'true' : 'false';
+    }
   }
 
   private flagsPath(): string {

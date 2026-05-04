@@ -5,8 +5,9 @@ import { filter } from 'rxjs/operators';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { ApiService } from '../../core/api.service';
+import { ProjectDirectoryService } from '../../core/project-directory.service';
 import { ConnectivityService, ConnectivityState } from '../../core/connectivity.service';
-import { Project, rowID, rowKey, rowName, SystemStatus } from '../../core/models';
+import { Flag, rowID, rowKey, SystemStatus } from '../../core/models';
 import { RealtimeService } from '../realtime/realtime.service';
 
 @Component({
@@ -17,15 +18,17 @@ import { RealtimeService } from '../realtime/realtime.service';
 })
 export class DashboardShell implements OnInit {
   private readonly api = inject(ApiService);
+  readonly projectDirectory = inject(ProjectDirectoryService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly connectivity = inject(ConnectivityService);
   readonly realtime = inject(RealtimeService);
 
-  readonly projects = signal<Project[]>([]);
   readonly status = signal<SystemStatus | null>(null);
   readonly selectedProjectId = signal('');
   readonly selectedEnvironmentKey = signal('');
+  /** Short label for the flag crumb on history URLs (resolved from list endpoint). */
+  readonly historyFlagLabel = signal<string | null>(null);
   readonly routerUrl = signal(this.router.url);
   readonly drift = computed(() => this.status()?.database?.state === 'migration_optional');
 
@@ -45,7 +48,7 @@ export class DashboardShell implements OnInit {
       next: (status) => this.status.set(status),
       error: () => this.status.set(null),
     });
-    this.reloadProjects();
+    this.projectDirectory.reload();
     this.applyUrl(this.router.url);
 
     this.router.events
@@ -60,18 +63,12 @@ export class DashboardShell implements OnInit {
   }
 
   reloadProjects(): void {
-    this.api.get<{ projects: Project[] }>('/projects').subscribe({
-      next: (res) => this.setProjects(res.projects ?? []),
-      error: () => this.setProjects([]),
-    });
-  }
-
-  private setProjects(projects: Project[]): void {
-    this.projects.set(projects);
+    this.projectDirectory.reload();
   }
 
   private applyUrl(url: string): void {
     const path = url.split('?')[0];
+    this.historyFlagLabel.set(null);
     if (path.includes('/dashboard/audit')) {
       this.selectedProjectId.set('');
       this.selectedEnvironmentKey.set('');
@@ -80,6 +77,16 @@ export class DashboardShell implements OnInit {
     if (/\/dashboard\/projects\/?$/.test(path) || path.endsWith('/dashboard/projects')) {
       this.selectedProjectId.set('');
       this.selectedEnvironmentKey.set('');
+      return;
+    }
+    const hist = path.match(
+      /\/dashboard\/projects\/([^/]+)\/environments\/([^/]+)\/flags\/([^/]+)\/history\/?$/,
+    );
+    if (hist) {
+      this.selectedProjectId.set(hist[1]);
+      this.selectedEnvironmentKey.set(hist[2]);
+      this.ensureProjectLoaded(hist[1]);
+      this.loadHistoryFlagCrumb(hist[1], hist[2], hist[3]);
       return;
     }
     const seg = path.match(/\/dashboard\/projects\/([^/]+)\/segments/);
@@ -102,14 +109,40 @@ export class DashboardShell implements OnInit {
     if (!projectId) {
       return;
     }
-    if (!this.projects().some((p) => rowID(p) === projectId)) {
-      this.reloadProjects();
+    if (!this.projectDirectory.projects().some((p) => rowID(p) === projectId)) {
+      this.projectDirectory.reload();
     }
   }
 
+  private loadHistoryFlagCrumb(projectId: string, environmentKey: string, flagRouteParam: string): void {
+    this.api.get<{ flags: Flag[] }>(`/projects/${projectId}/environments/${environmentKey}/flags`).subscribe({
+      next: (res) => {
+        const flags = res.flags ?? [];
+        const hit =
+          flags.find((f) => rowID(f) === flagRouteParam) ?? flags.find((f) => rowKey(f) === flagRouteParam);
+        const label = hit ? rowKey(hit) : shortRouteId(flagRouteParam);
+        this.historyFlagLabel.set(label);
+      },
+      error: () => this.historyFlagLabel.set(shortRouteId(flagRouteParam)),
+    });
+  }
+
   projectTitle(projectId: string): string {
-    const p = this.projects().find((x) => rowID(x) === projectId);
-    return p ? rowName(p) : projectId;
+    return this.projectDirectory.displayName(projectId);
+  }
+
+  /** Same visible string as environment key → add micro-labels so crumbs are not ambiguous. */
+  projectEnvLabelCollides(projectId: string, envKey: string): boolean {
+    return !!projectId && !!envKey && this.projectTitle(projectId).trim() === envKey.trim();
+  }
+
+  isAuditRoute(): boolean {
+    return this.routerUrl().split('?')[0].includes('/dashboard/audit');
+  }
+
+  isProjectsListCurrent(): boolean {
+    const u = this.routerUrl().split('?')[0];
+    return /\/dashboard\/projects\/?$/.test(u);
   }
 
   isFlagsArea(): boolean {
@@ -142,4 +175,11 @@ export class DashboardShell implements OnInit {
         return 'conn conn--bad';
     }
   }
+}
+
+function shortRouteId(id: string): string {
+  if (!id || id.length <= 12) {
+    return id;
+  }
+  return `${id.slice(0, 10)}…`;
 }

@@ -16,6 +16,7 @@
 .owl-lottie__canvas {
   display: block;
   height: 100%;
+  pointer-events: none;
   transform-origin: center center;
   width: 100%;
 }

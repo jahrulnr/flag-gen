@@ -5,6 +5,7 @@ import { catchError, Observable, switchMap, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { ApiErrorBody } from './models';
 import { CsrfService } from './csrf.service';
+import { type MappedHttpClientErrorPayload, userFacingHttpErrorMessage } from './user-facing-api-error';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -62,13 +63,19 @@ export class ApiService {
   private mapError(err: unknown): Observable<never> {
     if (err instanceof HttpErrorResponse) {
       const body = err.error as ApiErrorBody | null;
-      const message = body?.message ?? err.message;
+      const rawMessage = typeof body?.message === 'string' ? body.message : typeof err.message === 'string' ? err.message : '';
       const correlationId = body?.correlationId;
-      return throwError(() => ({
-        status: err.status,
-        message: correlationId ? `${message} (correlation: ${correlationId})` : message,
+      const code = typeof body?.error === 'string' ? body.error : undefined;
+      const payload: MappedHttpClientErrorPayload = {
+        status: err.status ?? 0,
+        code,
         correlationId,
-        error: body?.error,
+        rawMessage,
+        userMessage: userFacingHttpErrorMessage(err.status ?? 0, code, rawMessage),
+      };
+      return throwError(() => ({
+        ...payload,
+        message: payload.userMessage,
       }));
     }
     return throwError(() => err);

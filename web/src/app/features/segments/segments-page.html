@@ -1,7 +1,7 @@
 <section class="page">
   <header>
     <div>
-      <p class="eyebrow">Project {{ projectId() }}</p>
+      <p class="eyebrow">{{ projectLabel() }}</p>
       <h1>Segments</h1>
     </div>
     <div class="page-actions">
@@ -13,7 +13,11 @@
     </div>
   </header>
 
-  <p *ngIf="error()" class="error">{{ error() }}</p>
+  <app-inline-api-error [message]="error()" [reference]="errorRef()" />
+
+  <div *ngIf="form.id" class="flag-edit-banner" role="status">
+    Editing segment <strong>{{ form.key }}</strong>. Submit saves changes to this segment; leave the Key field unchanged unless you intend to migrate keys server-side.
+  </div>
 
   <form (ngSubmit)="form.id ? update() : create()" class="form wide">
     <label class="field">
@@ -25,9 +29,20 @@
       <input name="name" placeholder="e.g. Beta users" [(ngModel)]="form.name" required />
     </label>
     <label class="field field--full">
-      Rules JSON
-      <small class="hint">JSON array of segment rules.</small>
-      <textarea name="rulesJson" rows="5" [(ngModel)]="form.rulesJson" placeholder="e.g. []"></textarea>
+      <span id="segment-rules-label">Segment rules</span>
+      <small class="hint" id="segment-rules-hint">Must be valid JSON containing an array of rules.</small>
+      <textarea
+        id="segment-rules-input"
+        name="rulesJson"
+        rows="5"
+        [(ngModel)]="form.rulesJson"
+        placeholder="e.g. []"
+        aria-labelledby="segment-rules-label"
+        aria-describedby="segment-rules-hint"
+        spellcheck="false"
+        autocorrect="off"
+        autocapitalize="off"
+      ></textarea>
     </label>
     <button type="submit" class="btn btn--primary">
       <i class="fa-solid" [class.fa-pen]="form.id" [class.fa-plus]="!form.id" aria-hidden="true"></i>
@@ -55,4 +70,6 @@
       </div>
     </article>
   </div>
+
+  <app-destructive-confirm-dialog />
 </section>

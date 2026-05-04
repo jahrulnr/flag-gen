@@ -11,18 +11,47 @@
 }
 
 .field--check {
+  align-items: center;
   flex-direction: row;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
+.field--check span {
+  font-weight: 600;
+}
+
+.field--check input[type='checkbox'] {
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+  height: 1.15rem;
+  width: 1.15rem;
+}
+
+.flag-edit-banner {
+  background: rgb(52 211 153 / 12%);
+  border: 1px solid rgb(52 211 153 / 26%);
+  border-radius: var(--radius-md);
+  color: var(--fg-secondary);
+  font-size: 0.9rem;
+  grid-column: 1 / -1;
+  line-height: 1.5;
+  padding: 0.75rem 1rem;
+}
+
+.flag-edit-banner strong {
+  color: var(--fg-primary);
+}
+
 .field .hint {
-  color: #667085;
+  color: var(--fg-muted);
   font-size: 0.75rem;
   font-weight: 500;
 }
 
 .field .optional {
-  color: #667085;
+  color: var(--fg-muted);
   font-weight: 500;
 }
 

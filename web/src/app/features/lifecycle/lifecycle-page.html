@@ -10,7 +10,7 @@
     <p class="muted">The dashboard checks database status before loading admin screens.</p>
 
     <p *ngIf="loading()">Loading system status...</p>
-    <p *ngIf="error()" class="error">{{ error() }}</p>
+    <app-inline-api-error [message]="error()" [reference]="errorRef()" />
 
     <ng-container *ngIf="status() as s">
       <div class="status">

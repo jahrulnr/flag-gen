@@ -1,7 +1,7 @@
 <section class="page">
   <header>
     <div>
-      <p class="eyebrow">Project {{ projectId() }}</p>
+      <p class="eyebrow">{{ projectLabel() }}</p>
       <h1>Environments</h1>
     </div>
     <div class="page-actions">
@@ -13,7 +13,7 @@
     </div>
   </header>
 
-  <p *ngIf="error()" class="error">{{ error() }}</p>
+  <app-inline-api-error [message]="error()" [reference]="errorRef()" />
 
   <form (ngSubmit)="create()" class="form">
     <label class="field">
@@ -54,4 +54,6 @@
       </div>
     </article>
   </div>
+
+  <app-destructive-confirm-dialog />
 </section>

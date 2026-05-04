@@ -28,6 +28,7 @@ Before changing code, route yourself to the relevant skill in `.agents/skills/` 
 - Logging, metrics, correlation IDs, tracing, or runtime observability: read `observability-and-correlation/SKILL.md` and `logmanager-standards/SKILL.md`.
 - Gin log middleware, masked headers, logmanager segments, or trace-aware logging: read `logmanager-standards/SKILL.md`.
 - Wire providers, injectors, or dependency wiring: read `wire-dependency-injection/SKILL.md`.
+- Manual or exploratory QA of the Angular admin (`web/`, base `/app/`): read `web-admin-dashboard-qa/SKILL.md` first (includes non-negotiable UX bar). Product-facing UX summary and requirements: `docs/ui-ux-qa-summary-and-requirements.md`; historical regression notes may live in `docs/ui-ux-regression-report-*.md`.
 
 ## Verification Notes
 

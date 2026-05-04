@@ -1,25 +1,84 @@
 @use '../projects/projects-page.scss';
 
-.audit-form {
-  align-items: flex-end;
-  flex-wrap: wrap;
+.audit-page {
+  .audit-form {
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .audit-form .field {
+    min-width: 180px;
+  }
+
+  .audit-table-wrap {
+    background: rgb(15 23 42 / 72%);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    width: 100%;
+  }
+
+  table {
+    background: rgb(17 27 42 / 90%);
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  thead {
+    background: rgb(8 14 26 / 95%);
+  }
+
+  th {
+    border-bottom: 1px solid var(--border-strong);
+    color: var(--fg-secondary);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 0.85rem 0.85rem;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  tbody tr:nth-child(even) {
+    background: rgb(148 163 184 / 5%);
+  }
+
+  tbody tr:hover {
+    background: rgb(52 211 153 / 6%);
+  }
+
+  td {
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--fg-primary);
+    line-height: 1.45;
+    padding: 0.85rem;
+    vertical-align: top;
+  }
+
+  .audit-placeholder {
+    background: rgb(148 163 184 / 6%);
+    border: 1px dashed var(--border-subtle);
+    border-radius: var(--radius-md);
+    color: var(--fg-muted);
+    line-height: 1.55;
+    margin-top: 0.75rem;
+    padding: 1rem;
+  }
+
+  .audit-placeholder strong {
+    color: var(--fg-secondary);
+    display: block;
+    margin-bottom: 0.35rem;
+  }
 }
 
-.audit-form .field {
-  min-width: 180px;
-}
-
-table {
-  background: white;
-  border-collapse: collapse;
-  border-radius: 12px;
-  overflow: hidden;
-  width: 100%;
-}
-
-th,
-td {
-  border-bottom: 1px solid #e5e7eb;
-  padding: 0.75rem;
-  text-align: left;
+.heading-subtitle {
+  color: var(--fg-muted);
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 500;
+  letter-spacing: normal;
+  margin-top: 0.35rem;
+  max-width: 42rem;
+  text-transform: none;
 }

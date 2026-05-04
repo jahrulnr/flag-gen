@@ -1,4 +1,4 @@
-<section class="page">
+<section class="page audit-page">
   <header>
     <div>
       <p class="eyebrow">Read model</p>
@@ -9,20 +9,44 @@
     </div>
   </header>
 
-  <p *ngIf="error()" class="error">{{ error() }}</p>
+  <app-inline-api-error [message]="error()" [reference]="errorRef()" />
 
   <form (ngSubmit)="search()" class="form audit-form">
     <label class="field">
       Project ID
-      <input name="projectId" placeholder="UUID of the project" [(ngModel)]="filter.projectId" required />
+      <input
+        name="projectId"
+        placeholder="UUID of the project"
+        [(ngModel)]="filter.projectId"
+        required
+        spellcheck="false"
+        autocorrect="off"
+        autocomplete="off"
+        autocapitalize="off"
+      />
     </label>
     <label class="field">
       Entity type <span class="optional">(optional)</span>
-      <input name="entityType" placeholder="e.g. flag" [(ngModel)]="filter.entityType" />
+      <input
+        name="entityType"
+        placeholder="e.g. flag"
+        [(ngModel)]="filter.entityType"
+        spellcheck="false"
+        autocorrect="off"
+        autocapitalize="off"
+      />
     </label>
     <label class="field">
       Entity ID <span class="optional">(optional)</span>
-      <input name="entityId" placeholder="UUID or key" [(ngModel)]="filter.entityId" />
+      <input
+        name="entityId"
+        placeholder="UUID or key"
+        [(ngModel)]="filter.entityId"
+        spellcheck="false"
+        autocorrect="off"
+        autocapitalize="off"
+        autocomplete="off"
+      />
     </label>
     <button type="submit" class="btn btn--primary">
       <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
@@ -30,22 +54,34 @@
     </button>
   </form>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Entity</th>
-        <th>Action</th>
-        <th>Correlation</th>
-        <th>Created</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let row of rows()">
-        <td>{{ row.entityType ?? row.EntityType }} / {{ row.entityId ?? row.EntityID }}</td>
-        <td>{{ row.action ?? row.Action }}</td>
-        <td>{{ row.correlationId ?? row.CorrelationID }}</td>
-        <td>{{ row.createdAt ?? row.CreatedAt }}</td>
-      </tr>
-    </tbody>
-  </table>
+  <div *ngIf="!searched()" class="audit-placeholder">
+    <strong>No search yet</strong>
+    Enter a project UUID and tap Search to load audit rows.
+  </div>
+
+  <div *ngIf="searched() && rows().length === 0 && !error()" class="audit-placeholder">
+    <strong>No results</strong>
+    Try different filters or confirm the project ID is correct.
+  </div>
+
+  <div class="audit-table-wrap" *ngIf="searched() && rows().length > 0">
+    <table aria-label="Audit results">
+      <thead>
+        <tr>
+          <th>Entity</th>
+          <th>Action</th>
+          <th>Correlation</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of rows()">
+          <td>{{ row.entityType ?? row.EntityType }} / {{ row.entityId ?? row.EntityID }}</td>
+          <td>{{ row.action ?? row.Action }}</td>
+          <td>{{ row.correlationId ?? row.CorrelationID }}</td>
+          <td>{{ formatTimestamp(row.createdAt ?? row.CreatedAt) }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </section>

@@ -1,0 +1,41 @@
+<dialog
+  #dialogEl
+  class="destructive-dialog"
+  role="alertdialog"
+  aria-modal="true"
+  [attr.aria-labelledby]="state() ? 'destructive-dialog-title' : null"
+  [attr.aria-describedby]="state() ? 'destructive-dialog-desc' : null"
+  (close)="onDialogClose()"
+>
+  <div *ngIf="state() as s" class="destructive-dialog__panel">
+    <h2 id="destructive-dialog-title" class="destructive-dialog__title">{{ s.title }}</h2>
+    <p id="destructive-dialog-desc" class="destructive-dialog__body">{{ s.body }}</p>
+
+    <label class="destructive-dialog__field">
+      <span class="destructive-dialog__field-label"
+        >Type <code class="destructive-dialog__code">{{ s.expectedKey }}</code> to confirm</span
+      >
+      <input
+        id="destructive-key-challenge"
+        type="text"
+        name="destructiveChallenge"
+        class="destructive-dialog__input"
+        [(ngModel)]="challengeInput"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+        [attr.aria-invalid]="challengeInput.length > 0 && !keyMatches() ? 'true' : null"
+      />
+    </label>
+
+    <p class="destructive-dialog__risk">This action cannot be undone in the UI.</p>
+
+    <div class="destructive-dialog__actions">
+      <button type="button" class="btn btn--ghost" (click)="cancel()">Cancel</button>
+      <button type="button" class="btn btn--danger destructive-dialog__confirm" [disabled]="!keyMatches()" (click)="submit()">
+        {{ s.confirmLabel }}
+      </button>
+    </div>
+  </div>
+</dialog>

@@ -1,0 +1,135 @@
+.btn {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  font-weight: 700;
+  gap: 0.45rem;
+  justify-content: center;
+  min-height: 2.45rem;
+  padding: 0.62rem 0.85rem;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+button.btn {
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: 0;
+}
+
+.btn--ghost {
+  background: rgb(148 163 184 / 8%);
+  border-color: var(--border-subtle);
+  color: var(--fg-secondary);
+}
+
+.btn--ghost:hover {
+  background: rgb(148 163 184 / 13%);
+  border-color: var(--border-strong);
+  color: var(--fg-primary);
+}
+
+.btn--danger {
+  background: var(--danger-strong);
+  border-color: rgb(251 113 133 / 40%);
+  color: #fff1f2;
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: rgb(244 63 94 / 95%);
+}
+
+.destructive-dialog {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: rgb(15 23 42 / 98%);
+  color: var(--fg-primary);
+  max-width: min(28rem, calc(100vw - 2rem));
+  padding: 0;
+}
+
+.destructive-dialog::backdrop {
+  background: rgb(2 6 23 / 55%);
+}
+
+.destructive-dialog__panel {
+  display: grid;
+  gap: 1rem;
+  padding: 1.35rem;
+}
+
+.destructive-dialog__title {
+  font-size: 1.08rem;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.destructive-dialog__body {
+  color: var(--fg-secondary);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.destructive-dialog__field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.destructive-dialog__field-label {
+  color: var(--fg-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.destructive-dialog__code {
+  background: rgb(148 163 184 / 10%);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.92em;
+  padding: 0.12rem 0.35rem;
+}
+
+.destructive-dialog__input {
+  background: rgb(15 23 42 / 86%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--fg-primary);
+  min-height: 2.5rem;
+  padding: 0.6rem 0.75rem;
+}
+
+.destructive-dialog__input:focus {
+  border-color: rgb(251 113 133 / 45%);
+  outline: 0;
+}
+
+.destructive-dialog__risk {
+  color: rgb(251 113 133 / 88%);
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.destructive-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: flex-end;
+}
+
+.destructive-dialog__confirm:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}

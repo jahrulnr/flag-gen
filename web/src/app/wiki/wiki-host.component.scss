@@ -19,7 +19,7 @@
   padding: 0;
   pointer-events: auto;
   position: fixed;
-  right: max(1.25rem, env(safe-area-inset-right));
+  left: max(1.25rem, env(safe-area-inset-left));
   transition:
     border-color 160ms ease,
     box-shadow 160ms ease,

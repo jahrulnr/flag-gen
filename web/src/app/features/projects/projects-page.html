@@ -13,7 +13,7 @@
     </div>
   </header>
 
-  <p *ngIf="error()" class="error">{{ error() }}</p>
+  <app-inline-api-error [message]="error()" [reference]="errorRef()" />
 
   <form (ngSubmit)="create()" class="form">
     <label class="field">
@@ -40,7 +40,10 @@
         <span class="list-row__icon"><i class="fa-solid fa-folder" aria-hidden="true"></i></span>
         <div>
           <strong>{{ name(project) }}</strong>
-          <code>{{ key(project) }}</code>
+          <p class="list-row__meta">
+            <span class="list-meta__term">Key</span>
+            <code>{{ key(project) }}</code>
+          </p>
         </div>
       </div>
       <div class="row-actions">
@@ -58,4 +61,6 @@
       </div>
     </article>
   </div>
+
+  <app-destructive-confirm-dialog />
 </section>
