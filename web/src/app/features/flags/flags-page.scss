@@ -1,0 +1,61 @@
+@use '../projects/projects-page.scss';
+
+.wide {
+  align-items: stretch;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+}
+
+.field--full {
+  grid-column: 1 / -1;
+}
+
+.field--check {
+  flex-direction: row;
+  gap: 0.5rem;
+}
+
+.field .hint {
+  color: #667085;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.field .optional {
+  color: #667085;
+  font-weight: 500;
+}
+
+select {
+  background: rgb(15 23 42 / 86%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--fg-primary);
+  min-height: 2.65rem;
+  padding: 0.65rem;
+}
+
+textarea {
+  background: rgb(15 23 42 / 86%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--fg-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  grid-column: 1 / -1;
+  padding: 0.65rem;
+}
+
+select:focus,
+textarea:focus {
+  border-color: rgb(52 211 153 / 52%);
+  box-shadow: var(--focus-ring);
+  outline: 0;
+}
+
+textarea::placeholder {
+  color: rgb(148 163 184 / 72%);
+}
+
+.danger {
+  background: var(--danger-strong);
+}

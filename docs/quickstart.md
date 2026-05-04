@@ -7,11 +7,13 @@
 - Redis (optional for L2; service degrades without Redis for reads)
 - RabbitMQ (optional; required for outbox dispatch + broadcast consumer)
 
+If you use the shared **`/apps/services/compose.yml`** stack: service **`database`** is MariaDB on `127.0.0.1:3306` (`root` / `root`); **`redis`** uses `requirepass guest` on `127.0.0.1:6379`; **`rabbitmq`** listens on `127.0.0.1:5672` (default `guest` / `guest` from localhost). Copy **`.env.example`** to **`.env`**, create database `flag_gen`, then `export $(grep -v '^#' .env | xargs)` (or your shell equivalent) before `go run`.
+
 ## Environment
 
 | Variable | Purpose |
 |----------|---------|
-| `MYSQL_DSN` | MySQL DSN (required for server) |
+| `MYSQL_DSN` | MySQL DSN (required for server). In `loc=`, escape `/` as `%2F` (e.g. `loc=Asia%2FJakarta`); use `loc=UTC` or omit if unsure. Do not use `UTC+7` (`+` is treated as space; not a valid IANA zone in Go). |
 | `MIGRATIONS_DIR` | Path to `migrations/mysql` (default `migrations/mysql`) |
 | `REDIS_ADDR` | Redis address (optional) |
 | `RABBITMQ_AMQP_URL` | AMQP URL for outbox publisher / broadcast consumer |
@@ -27,8 +29,16 @@
 
 ## Migrate schema (CLI)
 
+From the repo root (loads **`.env`**):
+
 ```bash
-export MYSQL_DSN='user:pass@tcp(127.0.0.1:3306)/flaggen?parseTime=true'
+make migrate
+```
+
+Equivalent without Make:
+
+```bash
+export MYSQL_DSN='user:pass@tcp(127.0.0.1:3306)/flaggen?parseTime=true&loc=UTC'
 export MIGRATIONS_DIR=./migrations/mysql
 go run ./cmd/migrate
 ```
@@ -39,8 +49,8 @@ go run ./cmd/migrate
 go run ./cmd/app
 ```
 
-Health: `GET http://localhost:8080/health`  
-Lifecycle: `GET http://localhost:8080/v1/system/status`
+Health: `GET http://localhost:<APP_PORT>/health` (default in `.env.example` is `6123`, aligned with `make dev` + Angular dev API URL)  
+Lifecycle: `GET http://localhost:<APP_PORT>/v1/system/status`
 
 ## Install (empty DB)
 
@@ -50,6 +60,6 @@ When `database.state` is `db_empty`, call:
 
 ## WebSocket broadcast (dev)
 
-`GET ws://localhost:8080/v1/broadcast/flags?projectId=...&environmentKey=...&token=<BROADCAST_DEV_TOKEN>`
+`GET ws://localhost:<APP_PORT>/v1/broadcast/flags?projectId=...&environmentKey=...&token=<BROADCAST_DEV_TOKEN>`
 
 Requires `BROADCAST_DEV_TOKEN` to match when set.

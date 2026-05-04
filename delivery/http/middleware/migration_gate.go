@@ -27,6 +27,10 @@ func MigrationGate(svc SystemClassifier) gin.HandlerFunc {
 			c.Next()
 			return
 		}
+		if path == "/app" || strings.HasPrefix(path, "/app/") {
+			c.Next()
+			return
+		}
 
 		cl, err := svc.ClassifyCached(c.Request.Context())
 		if err != nil {
@@ -61,7 +65,7 @@ func MigrationGate(svc SystemClassifier) gin.HandlerFunc {
 }
 
 func gateAllow(cl migrate.Classification, path, method string) bool {
-	if strings.HasPrefix(path, "/v1/public/") {
+	if strings.HasPrefix(path, "/v1/public/") || strings.HasPrefix(path, "/api/public/") {
 		switch cl.State {
 		case migrate.StateDBReady, migrate.StateMigrationOptional:
 			return true
@@ -69,14 +73,17 @@ func gateAllow(cl migrate.Classification, path, method string) bool {
 			return false
 		}
 	}
-	if strings.HasPrefix(path, "/v1/system/") {
-		if path == "/v1/system/install" && method == http.MethodPost {
+	if strings.HasPrefix(path, "/v1/system/") || strings.HasPrefix(path, "/api/system/") {
+		if (path == "/v1/system/install" || path == "/api/system/install") && method == http.MethodPost {
 			return cl.State == migrate.StateDBEmpty && cl.CanInstall
 		}
-		if path == "/v1/system/migrate" && method == http.MethodPost {
+		if (path == "/v1/system/migrate" || path == "/api/system/migrate") && method == http.MethodPost {
 			return cl.CanMigrate
 		}
 		// GET status (and unknown system methods) allowed whenever connected enough to classify
+		return true
+	}
+	if strings.HasPrefix(path, "/api/security/") {
 		return true
 	}
 
@@ -88,7 +95,7 @@ func gateAllow(cl migrate.Classification, path, method string) bool {
 	case migrate.StateDBInvalid, migrate.StateDBAhead:
 		return false
 	case migrate.StateMigrationRequired:
-		if cl.RuntimeReadCompatible && (method == http.MethodGet || (method == http.MethodPost && strings.HasSuffix(path, "/flags/evaluate")) || strings.HasPrefix(path, "/v1/broadcast/")) {
+		if cl.RuntimeReadCompatible && (method == http.MethodGet || (method == http.MethodPost && strings.HasSuffix(path, "/flags/evaluate")) || strings.HasPrefix(path, "/v1/broadcast/") || strings.HasPrefix(path, "/api/broadcast/")) {
 			return true
 		}
 		return false

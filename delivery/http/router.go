@@ -10,23 +10,38 @@ import (
 )
 
 func RegisterV1Routes(r *gin.Engine, app *di.ApplicationState) {
-	v1 := r.Group("/v1")
+	RegisterRoutes(r.Group("/v1"), app, nil)
+}
 
+func RegisterAPIRoutes(r *gin.Engine, app *di.ApplicationState, csrf *middleware.CSRFProtection) {
+	api := r.Group("/api")
+	api.Use(csrf.Middleware())
+	RegisterRoutes(api, app, csrf)
+}
+
+func RegisterRoutes(group *gin.RouterGroup, app *di.ApplicationState, csrf *middleware.CSRFProtection) {
 	systemHandler := handler.NewSystemHandler(app.System)
-	v1.GET("/system/status", systemHandler.Status)
-	v1.GET("/system/metrics", systemHandler.Metrics)
-	v1.POST("/system/install", systemHandler.Install)
-	v1.POST("/system/migrate", systemHandler.Migrate)
+	group.GET("/system/status", systemHandler.Status)
+	group.GET("/system/metrics", systemHandler.Metrics)
+	group.POST("/system/install", systemHandler.Install)
+	group.POST("/system/migrate", systemHandler.Migrate)
+
+	if csrf != nil {
+		securityHandler := handler.NewSecurityHandler(csrf)
+		group.GET("/security/csrf", securityHandler.CSRF)
+	}
 
 	listFlags := usecase.NewListFlagsUsecase(app.Flags)
 
 	projectsHandler := handler.NewProjectsHandler(
 		usecase.NewListProjectsUsecase(app.Projects),
 		usecase.NewCreateProjectUsecase(app.Projects),
+		usecase.NewDeleteProjectUsecase(app.Projects, app.Environments, app.Segments),
 	)
 	envHandler := handler.NewEnvironmentsHandler(
 		usecase.NewListEnvironmentsUsecase(app.Environments),
 		usecase.NewCreateEnvironmentUsecase(app.Environments),
+		usecase.NewDeleteEnvironmentUsecase(app.Environments, app.Flags),
 	)
 	segmentsHandler := handler.NewSegmentsHandler(
 		usecase.NewListSegmentsUsecase(app.Segments),
@@ -51,38 +66,41 @@ func RegisterV1Routes(r *gin.Engine, app *di.ApplicationState) {
 		usecase.NewRollbackFlagUsecase(app.Flags, app.AdminRead, app.SnapshotPointer),
 	)
 
-	public := v1.Group("/public")
+	public := group.Group("/public")
 	public.Use(middleware.RateLimit(20, 60))
 	public.Use(middleware.StaticAPIKey("X-Public-Api-Key", app.Config.PublicReadAPIKey))
 	publicHandler := handler.NewPublicFlagsHandler(listFlags)
 	public.GET("/projects/:projectId/environments/:environmentKey/flags", publicHandler.List)
 
-	v1.GET("/projects", projectsHandler.List)
-	v1.POST("/projects", projectsHandler.Create)
+	group.GET("/projects", projectsHandler.List)
+	group.POST("/projects", projectsHandler.Create)
+	group.DELETE("/projects/:projectId", projectsHandler.Delete)
 
-	v1.GET("/projects/:projectId/environments", envHandler.List)
-	v1.POST("/projects/:projectId/environments", envHandler.Create)
+	group.GET("/projects/:projectId/environments", envHandler.List)
+	group.POST("/projects/:projectId/environments", envHandler.Create)
+	group.DELETE("/projects/:projectId/environments/:environmentKey", envHandler.Delete)
 
-	v1.GET("/projects/:projectId/segments", segmentsHandler.List)
-	v1.POST("/projects/:projectId/segments", segmentsHandler.Create)
-	v1.PATCH("/projects/:projectId/segments/:segmentId", segmentsHandler.Update)
-	v1.DELETE("/projects/:projectId/segments/:segmentId", segmentsHandler.Delete)
+	group.GET("/projects/:projectId/segments", segmentsHandler.List)
+	group.POST("/projects/:projectId/segments", segmentsHandler.Create)
+	group.PATCH("/projects/:projectId/segments/:segmentId", segmentsHandler.Update)
+	group.DELETE("/projects/:projectId/segments/:segmentId", segmentsHandler.Delete)
 
-	v1.GET("/projects/:projectId/environments/:environmentKey/flags", flagsHandler.List)
-	v1.POST("/projects/:projectId/environments/:environmentKey/flags", flagsHandler.Create)
-	v1.GET("/projects/:projectId/environments/:environmentKey/flags/:flagKey", flagsHandler.GetByKey)
-	v1.PATCH("/projects/:projectId/environments/:environmentKey/flags/:flagId", flagsHandler.Update)
-	v1.DELETE("/projects/:projectId/environments/:environmentKey/flags/:flagId", flagsHandler.Delete)
+	group.GET("/projects/:projectId/environments/:environmentKey/flags", flagsHandler.List)
+	group.POST("/projects/:projectId/environments/:environmentKey/flags", flagsHandler.Create)
+	// Static /flags/evaluate before /flags/:flagKey so "evaluate" is never captured as a key.
+	group.POST("/projects/:projectId/environments/:environmentKey/flags/evaluate", evalHandler.Evaluate)
+	group.GET("/projects/:projectId/environments/:environmentKey/flags/evaluate", evalHandler.EvaluateGET)
 
-	v1.POST("/projects/:projectId/environments/:environmentKey/flags/evaluate", evalHandler.Evaluate)
-	v1.GET("/projects/:projectId/environments/:environmentKey/flags/evaluate", evalHandler.EvaluateGET)
+	group.GET("/projects/:projectId/environments/:environmentKey/flags/:flagKey", flagsHandler.GetByKey)
+	group.PATCH("/projects/:projectId/environments/:environmentKey/flags/:flagKey", flagsHandler.Update)
+	group.DELETE("/projects/:projectId/environments/:environmentKey/flags/:flagKey", flagsHandler.Delete)
 
-	v1.GET("/projects/:projectId/environments/:environmentKey/flags/:flagId/versions", dashboardHandler.ListFlagVersions)
-	v1.GET("/projects/:projectId/environments/:environmentKey/flags/:flagId/versions/diff", dashboardHandler.DiffFlagVersions)
-	v1.POST("/projects/:projectId/environments/:environmentKey/flags/:flagId/rollback", dashboardHandler.Rollback)
+	group.GET("/projects/:projectId/environments/:environmentKey/flags/:flagKey/versions", dashboardHandler.ListFlagVersions)
+	group.GET("/projects/:projectId/environments/:environmentKey/flags/:flagKey/versions/diff", dashboardHandler.DiffFlagVersions)
+	group.POST("/projects/:projectId/environments/:environmentKey/flags/:flagKey/rollback", dashboardHandler.Rollback)
 
-	v1.GET("/projects/:projectId/audit", dashboardHandler.ListAudit)
+	group.GET("/projects/:projectId/audit", dashboardHandler.ListAudit)
 
 	wsHandler := handler.NewBroadcastWSHandler(app.Config, app.BroadcastHub, app.ScopedFlags)
-	v1.GET("/broadcast/flags", wsHandler.Connect)
+	group.GET("/broadcast/flags", wsHandler.Connect)
 }

@@ -118,3 +118,20 @@ WHERE id = ?`
 	}
 	return &p, nil
 }
+
+func (r *ProjectRepository) SoftDelete(ctx context.Context, projectID string) error {
+	now := time.Now().UTC()
+	const q = `
+UPDATE projects
+SET deleted_at = ?, updated_at = ?
+WHERE id = ? AND deleted_at IS NULL`
+	res, err := r.db.ExecContext(ctx, q, now, now, projectID)
+	if err != nil {
+		return apperror.NewInfrastructureError("DB", "project soft delete failed", err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return apperror.NewNotFoundError("Project", sql.ErrNoRows)
+	}
+	return nil
+}

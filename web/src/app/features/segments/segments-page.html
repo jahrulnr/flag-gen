@@ -1,0 +1,58 @@
+<section class="page">
+  <header>
+    <div>
+      <p class="eyebrow">Project {{ projectId() }}</p>
+      <h1>Segments</h1>
+    </div>
+    <div class="page-actions">
+      <app-wiki-button wikiId="segments" />
+      <button type="button" class="btn btn--ghost" (click)="reload()">
+        <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  <p *ngIf="error()" class="error">{{ error() }}</p>
+
+  <form (ngSubmit)="form.id ? update() : create()" class="form wide">
+    <label class="field">
+      Key
+      <input name="key" placeholder="e.g. beta_users" [(ngModel)]="form.key" required />
+    </label>
+    <label class="field">
+      Name
+      <input name="name" placeholder="e.g. Beta users" [(ngModel)]="form.name" required />
+    </label>
+    <label class="field field--full">
+      Rules JSON
+      <small class="hint">JSON array of segment rules.</small>
+      <textarea name="rulesJson" rows="5" [(ngModel)]="form.rulesJson" placeholder="e.g. []"></textarea>
+    </label>
+    <button type="submit" class="btn btn--primary">
+      <i class="fa-solid" [class.fa-pen]="form.id" [class.fa-plus]="!form.id" aria-hidden="true"></i>
+      {{ form.id ? 'Update segment' : 'Create segment' }}
+    </button>
+  </form>
+
+  <div class="list-card" aria-label="Segments">
+    <article *ngFor="let segment of segments()" class="list-row">
+      <div class="list-row__main">
+        <span class="list-row__icon"><i class="fa-solid fa-users-viewfinder" aria-hidden="true"></i></span>
+        <div>
+          <strong>{{ name(segment) }}</strong>
+          <code>{{ key(segment) }}</code>
+        </div>
+      </div>
+      <div class="row-actions">
+        <button type="button" class="btn btn--ghost" (click)="edit(segment)">
+          <i class="fa-solid fa-pen" aria-hidden="true"></i>
+          Edit
+        </button>
+        <button type="button" class="btn btn--icon btn--danger" (click)="remove(segment)" [attr.aria-label]="'Delete segment ' + name(segment)">
+          <i class="fa-solid fa-trash" aria-hidden="true"></i>
+        </button>
+      </div>
+    </article>
+  </div>
+</section>

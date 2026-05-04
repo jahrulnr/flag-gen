@@ -1,0 +1,114 @@
+<div class="shell">
+  <aside class="sidebar">
+    <a class="brand" routerLink="/dashboard/projects">
+      <span class="brand__mark"><i class="fa-solid fa-flag" aria-hidden="true"></i></span>
+      <span>Flag Gen</span>
+    </a>
+    <nav aria-label="Dashboard navigation">
+      <p class="nav-label">Workspace</p>
+      <ul class="nav-root">
+        <li>
+          <a
+            class="nav-link"
+            routerLink="/dashboard/projects"
+            routerLinkActive="is-active"
+            [routerLinkActiveOptions]="{ exact: true }"
+          >
+            <i class="fa-solid fa-folder-tree" aria-hidden="true"></i>
+            <span>Projects</span>
+            <i class="fa-solid fa-chevron-down nav-link__chevron" aria-hidden="true"></i>
+          </a>
+          <ul class="nav-children" *ngIf="selectedProjectId()">
+            <li>
+              <a
+                class="nav-link nav-link--child"
+                [routerLink]="['/dashboard/projects', selectedProjectId(), 'environments']"
+                routerLinkActive="is-active"
+              >
+                <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                <span>Environments</span>
+              </a>
+            </li>
+            <li>
+              <a
+                class="nav-link nav-link--child"
+                [routerLink]="['/dashboard/projects', selectedProjectId(), 'segments']"
+                routerLinkActive="is-active"
+              >
+                <i class="fa-solid fa-users-viewfinder" aria-hidden="true"></i>
+                <span>Segments</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+      </ul>
+
+      <p class="nav-label">System</p>
+      <ul class="nav-root">
+        <li>
+          <a class="nav-link" [routerLink]="['/dashboard/audit']" routerLinkActive="is-active">
+            <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+            <span>Audit</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </aside>
+
+  <section class="workspace">
+    <header class="topbar">
+      <div class="topbar__left">
+        <strong>Admin dashboard</strong>
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <a routerLink="/dashboard/projects">Projects</a>
+          <ng-container *ngIf="selectedProjectId() as pid">
+            <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
+            <a [routerLink]="['/dashboard/projects', pid, 'environments']">{{ projectTitle(pid) }}</a>
+          </ng-container>
+          <ng-container *ngIf="selectedProjectId() && isSegmentsArea()">
+            <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
+            <span class="breadcrumb__here">Segments</span>
+          </ng-container>
+          <ng-container *ngIf="selectedProjectId() && isEnvironmentsList() && !isSegmentsArea()">
+            <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
+            <span class="breadcrumb__here">Environments</span>
+          </ng-container>
+          <ng-container *ngIf="selectedEnvironmentKey() as ek">
+            <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
+            <a [routerLink]="['/dashboard/projects', selectedProjectId(), 'environments', ek, 'flags']">{{ ek }}</a>
+          </ng-container>
+          <ng-container *ngIf="selectedEnvironmentKey() && isFlagsArea() && !isFlagHistory()">
+            <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
+            <span class="breadcrumb__here">Flags</span>
+          </ng-container>
+          <ng-container *ngIf="isFlagHistory()">
+            <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
+            <span class="breadcrumb__here">History</span>
+          </ng-container>
+          <ng-container *ngIf="routerUrl().includes('/dashboard/audit')">
+            <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
+            <span class="breadcrumb__here">Audit</span>
+          </ng-container>
+        </nav>
+      </div>
+      <div class="topbar__right">
+        <span [class]="connectivityClass()" title="Client connection to API">
+          <span class="conn__dot" aria-hidden="true"></span>
+          {{ connectivityLabel() }}
+        </span>
+      </div>
+    </header>
+
+    <div *ngIf="drift()" class="notice">
+      Schema drift is compatible but migrations are available. Plan a maintenance window.
+    </div>
+
+    <div *ngIf="realtime.lastMessage()" class="notice success">
+      Realtime event received: {{ realtime.lastMessage() }}
+    </div>
+
+    <main class="content">
+      <router-outlet />
+    </main>
+  </section>
+</div>

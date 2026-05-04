@@ -1,0 +1,34 @@
+<button type="button" class="wiki-fab" (click)="openFromFab($event)" aria-label="Open help for this page">
+  <app-owl-lottie />
+  <span class="wiki-fab__pulse" aria-hidden="true"></span>
+</button>
+
+<div *ngIf="wiki.isOpen()" class="wiki-layer" role="presentation">
+  <button type="button" class="wiki-backdrop" aria-label="Close wiki" (click)="close()"></button>
+
+  <aside #drawer class="wiki-drawer" role="dialog" aria-modal="true" [attr.aria-labelledby]="'wiki-title-' + wiki.activeContent().id">
+    <header class="wiki-drawer__header">
+      <div class="wiki-drawer__mascot" aria-hidden="true">
+        <app-owl-lottie />
+      </div>
+      <div>
+        <p class="wiki-drawer__eyebrow">{{ wiki.activeContent().eyebrow }}</p>
+        <h2 [id]="'wiki-title-' + wiki.activeContent().id">{{ wiki.activeContent().title }}</h2>
+      </div>
+      <button #closeButton type="button" class="wiki-drawer__close" aria-label="Close wiki" (click)="close()">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    </header>
+
+    <div class="wiki-drawer__body">
+      <p class="wiki-drawer__summary">{{ wiki.activeContent().summary }}</p>
+
+      <section *ngFor="let section of wiki.activeContent().sections" class="wiki-section">
+        <h3>{{ section.title }}</h3>
+        <ul>
+          <li *ngFor="let bullet of section.bullets">{{ bullet }}</li>
+        </ul>
+      </section>
+    </div>
+  </aside>
+</div>

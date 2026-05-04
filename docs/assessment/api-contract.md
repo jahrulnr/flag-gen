@@ -141,6 +141,12 @@ List environments for a project.
 ### POST /projects/{projectId}/environments
 Create an environment.
 
+### DELETE /projects/{projectId}
+Soft-delete a project. **409** if the project still has any environments or segments (remove those first). **204** on success.
+
+### DELETE /projects/{projectId}/environments/{environmentKey}
+Soft-delete an environment. **409** if the environment still has any flags. **204** on success.
+
 ## Flag Management
 
 ### GET /projects/{projectId}/environments/{environmentKey}/flags

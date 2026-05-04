@@ -1,0 +1,25 @@
+@use '../projects/projects-page.scss';
+
+.audit-form {
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.audit-form .field {
+  min-width: 180px;
+}
+
+table {
+  background: white;
+  border-collapse: collapse;
+  border-radius: 12px;
+  overflow: hidden;
+  width: 100%;
+}
+
+th,
+td {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0.75rem;
+  text-align: left;
+}

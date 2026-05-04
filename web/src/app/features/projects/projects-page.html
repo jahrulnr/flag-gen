@@ -1,0 +1,61 @@
+<section class="page">
+  <header>
+    <div>
+      <p class="eyebrow">Workspace</p>
+      <h1>Projects</h1>
+    </div>
+    <div class="page-actions">
+      <app-wiki-button wikiId="projects" />
+      <button type="button" class="btn btn--ghost" (click)="reload()">
+        <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  <p *ngIf="error()" class="error">{{ error() }}</p>
+
+  <form (ngSubmit)="create()" class="form">
+    <label class="field">
+      Key
+      <input name="key" placeholder="e.g. my_service" [(ngModel)]="form.key" required />
+    </label>
+    <label class="field">
+      Name
+      <input name="name" placeholder="e.g. My service" [(ngModel)]="form.name" required />
+    </label>
+    <label class="field">
+      Description <span class="optional">(optional)</span>
+      <input name="description" placeholder="Short summary for admins" [(ngModel)]="form.description" />
+    </label>
+    <button type="submit" class="btn btn--primary">
+      <i class="fa-solid fa-plus" aria-hidden="true"></i>
+      Create project
+    </button>
+  </form>
+
+  <div class="list-card" aria-label="Projects">
+    <article *ngFor="let project of projects()" class="list-row">
+      <div class="list-row__main">
+        <span class="list-row__icon"><i class="fa-solid fa-folder" aria-hidden="true"></i></span>
+        <div>
+          <strong>{{ name(project) }}</strong>
+          <code>{{ key(project) }}</code>
+        </div>
+      </div>
+      <div class="row-actions">
+        <a class="btn btn--ghost" [routerLink]="['/dashboard/projects', id(project), 'environments']">
+          <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+          Environments
+        </a>
+        <a class="btn btn--ghost" [routerLink]="['/dashboard/projects', id(project), 'segments']">
+          <i class="fa-solid fa-users-viewfinder" aria-hidden="true"></i>
+          Segments
+        </a>
+        <button type="button" class="btn btn--icon btn--danger" (click)="remove(project)" [attr.aria-label]="'Delete project ' + name(project)">
+          <i class="fa-solid fa-trash" aria-hidden="true"></i>
+        </button>
+      </div>
+    </article>
+  </div>
+</section>

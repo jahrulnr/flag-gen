@@ -14,10 +14,15 @@ import (
 type ProjectsHandler struct {
 	list   *usecase.ListProjectsUsecase
 	create *usecase.CreateProjectUsecase
+	delete *usecase.DeleteProjectUsecase
 }
 
-func NewProjectsHandler(list *usecase.ListProjectsUsecase, create *usecase.CreateProjectUsecase) *ProjectsHandler {
-	return &ProjectsHandler{list: list, create: create}
+func NewProjectsHandler(
+	list *usecase.ListProjectsUsecase,
+	create *usecase.CreateProjectUsecase,
+	delete *usecase.DeleteProjectUsecase,
+) *ProjectsHandler {
+	return &ProjectsHandler{list: list, create: create, delete: delete}
 }
 
 type createProjectRequest struct {
@@ -53,4 +58,13 @@ func (h *ProjectsHandler) Create(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"project": out, "correlationId": response.CorrelationID(c)})
+}
+
+func (h *ProjectsHandler) Delete(c *gin.Context) {
+	projectID := c.Param("projectId")
+	if err := h.delete.Execute(c.Request.Context(), projectID); err != nil {
+		response.AbortErr(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
 }

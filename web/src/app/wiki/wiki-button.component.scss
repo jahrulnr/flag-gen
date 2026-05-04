@@ -1,0 +1,31 @@
+.wiki-button {
+  align-items: center;
+  background: rgb(52 211 153 / 12%);
+  border: 1px solid rgb(52 211 153 / 22%);
+  border-radius: var(--radius-sm);
+  color: #bbf7d0;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 800;
+  gap: 0.45rem;
+  min-height: 2.45rem;
+  padding: 0.62rem 0.85rem;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.wiki-button:hover {
+  background: rgb(52 211 153 / 18%);
+  border-color: rgb(52 211 153 / 36%);
+  color: var(--fg-primary);
+  transform: translateY(-1px);
+}
+
+.wiki-button:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: 0;
+}

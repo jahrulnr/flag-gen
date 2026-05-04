@@ -1,0 +1,45 @@
+<main class="lifecycle">
+  <section class="card">
+    <header class="lifecycle-header">
+      <div>
+        <p class="eyebrow">Flag Gen Dashboard</p>
+        <h1>System lifecycle</h1>
+      </div>
+      <app-wiki-button wikiId="lifecycle" />
+    </header>
+    <p class="muted">The dashboard checks database status before loading admin screens.</p>
+
+    <p *ngIf="loading()">Loading system status...</p>
+    <p *ngIf="error()" class="error">{{ error() }}</p>
+
+    <ng-container *ngIf="status() as s">
+      <div class="status">
+        <span>Database state</span>
+        <strong>{{ s.database?.state ?? 'unknown' }}</strong>
+      </div>
+      <p class="muted">{{ s.message }}</p>
+
+      <form *ngIf="s.database?.state === 'db_empty'" (ngSubmit)="submitInstall()" class="form">
+        <h2>Install database</h2>
+        <label>Email <input name="email" [(ngModel)]="install.email" /></label>
+        <label>Name <input name="name" [(ngModel)]="install.name" /></label>
+        <label>Password <input name="password" type="password" [(ngModel)]="install.password" /></label>
+        <label>Project key <input name="projectKey" [(ngModel)]="install.projectKey" /></label>
+        <label>Environment key <input name="environmentKey" [(ngModel)]="install.environmentKey" /></label>
+        <button type="submit">Install</button>
+      </form>
+
+      <section *ngIf="s.database?.state === 'migration_required'" class="form">
+        <h2>Migration required</h2>
+        <p>Dashboard management is blocked until migrations are applied.</p>
+        <button type="button" (click)="runMigration()">Run migration</button>
+      </section>
+
+      <section *ngIf="s.database?.state === 'db_unreachable' || s.database?.state === 'db_invalid' || s.database?.state === 'db_ahead'" class="form">
+        <h2>Action required</h2>
+        <p>Fix the database state from backend/deployment, then refresh.</p>
+        <button type="button" (click)="reloadStatus()">Refresh</button>
+      </section>
+    </ng-container>
+  </section>
+</main>

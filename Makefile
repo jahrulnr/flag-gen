@@ -1,5 +1,53 @@
 SERVICE_VERSION := 0.0.1
 SERVICE_NAME := flag-gen
+# Bash for recipes (dev trap, [[ ]], etc.)
+SHELL := /usr/bin/env bash
+
+# Angular `ng serve` port (see web/package.json). Used so Go can proxy /app in dev.
+DASHBOARD_DEV_SSR_URL ?= http://127.0.0.1:6124
+
+##@ Development
+
+# Load .env without shell-evaluating values (MYSQL_DSN tcp(...) and & are safe).
+define LOAD_DOTENV
+. "$(CURDIR)/scripts/load-dotenv.sh" "$(CURDIR)/.env"
+endef
+
+define DEV_ENV
+$(LOAD_DOTENV) && export DASHBOARD_SSR_URL="$(DASHBOARD_DEV_SSR_URL)"
+endef
+
+.PHONY: dev
+dev: ## Run Go API + Angular in parallel (same idea as make -j2 backend/frontend)
+	@$(MAKE) -j2 dev-backend dev-frontend
+
+.PHONY: dev-backend
+dev-backend: ## Go API (:APP_PORT); loads .env; DASHBOARD_SSR_URL → Angular dev server
+	cd "$(CURDIR)" && $(DEV_ENV) && go run ./cmd/app
+
+.PHONY: dev-frontend
+dev-frontend: ## Angular dashboard: npm install then npm run dev (:6124, /app/)
+	cd "$(CURDIR)/web" && npm install && npm run dev
+
+.PHONY: dev-api
+dev-api: ## Go API only (same env as dev-backend)
+	cd "$(CURDIR)" && $(DEV_ENV) && go run ./cmd/app
+
+.PHONY: dev-web
+dev-web: ## Angular only (no npm install)
+	cd "$(CURDIR)/web" && npm run dev
+
+##@ Database
+
+.PHONY: migrate
+migrate: ## Apply pending MySQL migrations (loads .env; empty users → dev admin admin@local / admin — see .env.example)
+	cd "$(CURDIR)" && $(LOAD_DOTENV) && go run ./cmd/migrate
+
+.PHONY: seed
+seed: ## Idempotent seed: bootstrap project/env when empty, then demo segments + flags (loads .env; SEED_*)
+	cd "$(CURDIR)" && $(LOAD_DOTENV) && go run ./cmd/seed
+
+##@ Project
 
 .PHONY: help
 help: ## Display this help screen

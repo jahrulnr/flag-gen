@@ -1,0 +1,51 @@
+<section class="page">
+  <header>
+    <div>
+      <p class="eyebrow">Read model</p>
+      <h1>Audit</h1>
+    </div>
+    <div class="page-actions">
+      <app-wiki-button wikiId="audit" />
+    </div>
+  </header>
+
+  <p *ngIf="error()" class="error">{{ error() }}</p>
+
+  <form (ngSubmit)="search()" class="form audit-form">
+    <label class="field">
+      Project ID
+      <input name="projectId" placeholder="UUID of the project" [(ngModel)]="filter.projectId" required />
+    </label>
+    <label class="field">
+      Entity type <span class="optional">(optional)</span>
+      <input name="entityType" placeholder="e.g. flag" [(ngModel)]="filter.entityType" />
+    </label>
+    <label class="field">
+      Entity ID <span class="optional">(optional)</span>
+      <input name="entityId" placeholder="UUID or key" [(ngModel)]="filter.entityId" />
+    </label>
+    <button type="submit" class="btn btn--primary">
+      <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+      Search
+    </button>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Entity</th>
+        <th>Action</th>
+        <th>Correlation</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let row of rows()">
+        <td>{{ row.entityType ?? row.EntityType }} / {{ row.entityId ?? row.EntityID }}</td>
+        <td>{{ row.action ?? row.Action }}</td>
+        <td>{{ row.correlationId ?? row.CorrelationID }}</td>
+        <td>{{ row.createdAt ?? row.CreatedAt }}</td>
+      </tr>
+    </tbody>
+  </table>
+</section>

@@ -1,0 +1,230 @@
+.page {
+  display: grid;
+  gap: 1.1rem;
+}
+
+header,
+.form,
+.page-actions,
+.row-actions {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+}
+
+header {
+  justify-content: space-between;
+}
+
+h1,
+p {
+  margin: 0;
+}
+
+.eyebrow {
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.form {
+  background: linear-gradient(180deg, rgb(15 23 42 / 92%), rgb(15 23 42 / 78%));
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  flex-wrap: wrap;
+  padding: 1.1rem;
+}
+
+.field {
+  color: var(--fg-secondary);
+  display: flex;
+  flex-direction: column;
+  font-size: 0.875rem;
+  font-weight: 600;
+  gap: 0.35rem;
+}
+
+.field .optional {
+  color: var(--fg-muted);
+  font-weight: 500;
+}
+
+input {
+  background: rgb(15 23 42 / 86%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--fg-primary);
+  min-height: 2.65rem;
+  padding: 0.65rem 0.75rem;
+}
+
+input::placeholder {
+  color: rgb(148 163 184 / 72%);
+}
+
+input:focus {
+  border-color: rgb(52 211 153 / 52%);
+  box-shadow: var(--focus-ring);
+  outline: 0;
+}
+
+.btn {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  font-weight: 700;
+  gap: 0.45rem;
+  justify-content: center;
+  min-height: 2.45rem;
+  padding: 0.62rem 0.85rem;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+button.btn,
+a.btn {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: 0;
+}
+
+.btn--primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: #04130d;
+}
+
+.btn--primary:hover {
+  background: linear-gradient(135deg, #6ee7b7, var(--accent));
+}
+
+.btn--ghost {
+  background: rgb(148 163 184 / 8%);
+  border-color: var(--border-subtle);
+  color: var(--fg-secondary);
+}
+
+.btn--ghost:hover {
+  background: rgb(148 163 184 / 13%);
+  border-color: var(--border-strong);
+  color: var(--fg-primary);
+}
+
+.btn--icon {
+  aspect-ratio: 1;
+  padding: 0;
+  width: 2.45rem;
+}
+
+.btn--danger {
+  background: var(--danger-soft);
+  border-color: rgb(251 113 133 / 22%);
+  color: #fecdd3;
+}
+
+.btn--danger:hover {
+  background: rgb(251 113 133 / 18%);
+  border-color: rgb(251 113 133 / 34%);
+  color: #fff1f2;
+}
+
+.list-card {
+  background: rgb(15 23 42 / 72%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  display: grid;
+  overflow: hidden;
+}
+
+.list-row {
+  align-items: center;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 1rem;
+}
+
+.list-row + .list-row {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.list-row:hover {
+  background: rgb(148 163 184 / 6%);
+}
+
+.list-row__main {
+  align-items: center;
+  display: flex;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.list-row__icon {
+  align-items: center;
+  background: var(--accent-soft);
+  border: 1px solid rgb(52 211 153 / 18%);
+  border-radius: 14px;
+  color: var(--accent);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 2.5rem;
+  justify-content: center;
+  width: 2.5rem;
+}
+
+.list-row strong {
+  color: var(--fg-primary);
+  display: block;
+  font-size: 0.98rem;
+  letter-spacing: -0.01em;
+}
+
+code {
+  color: var(--fg-muted);
+  display: block;
+  margin-top: 0.2rem;
+}
+
+.error {
+  background: var(--danger-soft);
+  border: 1px solid rgb(251 113 133 / 22%);
+  border-radius: var(--radius-sm);
+  color: #fecdd3;
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+}
+
+@media (max-width: 760px) {
+  header,
+  .list-row {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  header {
+    display: grid;
+  }
+
+  .row-actions {
+    flex-wrap: wrap;
+  }
+
+  .page-actions {
+    flex-wrap: wrap;
+  }
+}

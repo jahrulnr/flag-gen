@@ -1,0 +1,34 @@
+<section class="page">
+  <header>
+    <div>
+      <p class="eyebrow">{{ flagId }}</p>
+      <h1>Flag history</h1>
+    </div>
+    <div class="page-actions">
+      <app-wiki-button wikiId="flag-history" />
+      <button type="button" class="btn btn--ghost" (click)="reload()">
+        <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  <p *ngIf="error()" class="error">{{ error() }}</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Version</th>
+        <th>Change</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let row of versions()">
+        <td>{{ row.version ?? row.Version }}</td>
+        <td>{{ row.changeType ?? row.ChangeType }}</td>
+        <td>{{ row.createdAt ?? row.CreatedAt }}</td>
+      </tr>
+    </tbody>
+  </table>
+</section>

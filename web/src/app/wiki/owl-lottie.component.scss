@@ -1,0 +1,48 @@
+:host {
+  display: block;
+  overflow: hidden;
+  position: relative;
+}
+
+.owl-lottie__viewport {
+  align-items: center;
+  display: grid;
+  height: 100%;
+  justify-items: center;
+  overflow: hidden;
+  width: 100%;
+}
+
+.owl-lottie__canvas {
+  display: block;
+  height: 100%;
+  transform-origin: center center;
+  width: 100%;
+}
+
+.owl-lottie__canvas--hidden {
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  visibility: hidden;
+}
+
+.owl-lottie__fallback {
+  align-items: center;
+  color: var(--accent);
+  display: none;
+  font-size: 1.35rem;
+  font-weight: 900;
+  inset: 0;
+  justify-content: center;
+  position: absolute;
+}
+
+:host-context(.wiki-fab) .owl-lottie__fallback,
+:host-context(.wiki-drawer__mascot) .owl-lottie__fallback {
+  font-size: 1.1rem;
+}
+
+:host(:has(.owl-lottie__canvas--hidden)) .owl-lottie__fallback {
+  display: inline-flex;
+}

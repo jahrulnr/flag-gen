@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -9,14 +10,18 @@ import (
 )
 
 type Config struct {
-	App      AppConfig
-	Server   ServerConfig
-	TLS      TLSConfig
-	MySQL    MySQLConfig
-	Redis    RedisConfig
-	Snapshot SnapshotConfig
-	RabbitMQ RabbitMQConfig
-	Outbox   OutboxWorkerConfig
+	App       AppConfig
+	Server    ServerConfig
+	TLS       TLSConfig
+	MySQL     MySQLConfig
+	Seed      SeedConfig
+	Redis     RedisConfig
+	Snapshot  SnapshotConfig
+	RabbitMQ  RabbitMQConfig
+	Outbox    OutboxWorkerConfig
+	Dashboard DashboardConfig
+	Security  SecurityConfig
+	CORS      CORSConfig
 
 	MigrationsDir      string
 	AllowDevMigrate    bool
@@ -40,6 +45,20 @@ type ServerConfig struct {
 	ReadHeaderTimeout time.Duration
 }
 
+type DashboardConfig struct {
+	SSRURL string
+}
+
+type SecurityConfig struct {
+	CSRFSecret     string
+	CSRFSessionKey string
+}
+
+// CORSConfig holds browser cross-origin settings (credentialed requests cannot use wildcard origins).
+type CORSConfig struct {
+	AllowedOrigins []string
+}
+
 type TLSConfig struct {
 	Enabled     bool
 	BaseDir     string
@@ -49,6 +68,12 @@ type TLSConfig struct {
 
 type MySQLConfig struct {
 	DSN string
+}
+
+// SeedConfig selects the project/environment scope for cmd/seed (defaults match POST /v1/system/install).
+type SeedConfig struct {
+	ProjectKey     string
+	EnvironmentKey string
 }
 
 type RedisConfig struct {
@@ -86,7 +111,7 @@ func Load() (Config, error) {
 	var cfg Config
 
 	cfg.App.Env = getString("APP_ENV", "development")
-	cfg.Server.Port = getString("APP_PORT", "8080")
+	cfg.Server.Port = getString("APP_PORT", "6123")
 
 	rht, err := getDurationSeconds("SERVER_LISTEN_TIMEOUT", 10*time.Second)
 	if err != nil {
@@ -107,6 +132,9 @@ func Load() (Config, error) {
 
 	cfg.MySQL.DSN = getString("MYSQL_DSN", "")
 
+	cfg.Seed.ProjectKey = getString("SEED_PROJECT_KEY", "default")
+	cfg.Seed.EnvironmentKey = getString("SEED_ENVIRONMENT_KEY", "production")
+
 	cfg.Redis.Addr = getString("REDIS_ADDR", "")
 	cfg.Redis.Addrs = splitCSV(getString("REDIS_ADDRS", ""))
 	cfg.Redis.ForceCluster = getBool("REDIS_FORCE_CLUSTER", false)
@@ -117,6 +145,12 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	cfg.Redis.DB = rdb
+
+	cfg.Dashboard.SSRURL = getString("DASHBOARD_SSR_URL", "http://127.0.0.1:4000")
+	cfg.Security.CSRFSecret = getString("CSRF_SECRET", "")
+	cfg.Security.CSRFSessionKey = getString("CSRF_SESSION_COOKIE", "flag_gen_csrf_session")
+
+	cfg.CORS.AllowedOrigins = splitCSV(getString("CORS_ALLOWED_ORIGINS", ""))
 
 	cfg.Snapshot.Dir = getString("SNAPSHOT_DIR", "/app/snapshot")
 	cfg.Snapshot.SchedulerEnabled = getBool("SNAPSHOT_SCHEDULER_ENABLED", false)
@@ -195,6 +229,45 @@ func (c Config) TLSCertPath() string {
 
 func (c Config) TLSKeyPath() string {
 	return c.TLS.BaseDir + c.TLS.KeyRelPath
+}
+
+// IsCORSOriginAllowed reports whether the browser Origin may receive credentialed CORS responses.
+// Browsers reject Access-Control-Allow-Origin: * together with Access-Control-Allow-Credentials: true.
+//
+// Production (APP_ENV=production): only origins listed in CORS_ALLOWED_ORIGINS (comma-separated) match.
+// Non-production: those origins plus any http(s) origin whose host is localhost, 127.0.0.1, or ::1.
+func (c Config) IsCORSOriginAllowed(origin string) bool {
+	if origin == "" {
+		return true
+	}
+	for _, o := range c.CORS.AllowedOrigins {
+		o = strings.TrimSpace(o)
+		if o != "" && origin == o {
+			return true
+		}
+	}
+	if strings.EqualFold(c.App.Env, "production") {
+		return false
+	}
+	return isLocalhostStyleOrigin(origin)
+}
+
+func isLocalhostStyleOrigin(origin string) bool {
+	u, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+	switch u.Scheme {
+	case "http", "https":
+	default:
+		return false
+	}
+	switch strings.ToLower(u.Hostname()) {
+	case "localhost", "127.0.0.1", "::1":
+		return true
+	default:
+		return false
+	}
 }
 
 func getString(key, def string) string {

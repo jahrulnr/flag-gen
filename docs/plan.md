@@ -66,7 +66,7 @@ Dokumen ini merangkum status implementasi berdasarkan pekerjaan yang sudah dibua
 ## 10) Backlog / Next Steps
 - [x] Database lifecycle guard: detect DB empty vs installed, schema compatibility check, block dashboard/API access when migrations pending
 - [x] Install flow backend support: backend-only DB config, install allowed only on connected empty DB
-- [] Migration blocking page + non-blocking drift notification (frontend)
+- [x] Migration blocking page + non-blocking drift notification (frontend)
 - [x] Go migrator shared package/registry + separate `cmd/app` and `cmd/migrate` binary approach
 - [x] Expose schema status endpoint (current schema version, target schema version, compatibility) for frontend gating
 
@@ -89,15 +89,15 @@ Dokumen ini merangkum status implementasi berdasarkan pekerjaan yang sudah dibua
 - [x] Endpoint: flag version history + diff/compare support
 - [x] Endpoint: rollback flag to a prior version
 
-- [x] Angular dashboard scaffold instructions in `web/dashboard/README.md`
-- [] Angular admin dashboard (GrowthBook-inspired) — scaffold app + layout utama
+- [x] Angular dashboard scaffold instructions in `web/README.md`
+- [x] Angular admin dashboard (GrowthBook-inspired) — scaffold app + layout utama
 - [] Angular auth pages (login/session) atau dev bypass untuk local
-- [] Angular views: Projects (list/create)
-- [] Angular views: Environments (list/create per project)
-- [] Angular views: Flags (list/create/edit/delete) + rule builder minimal + rollout editor
-- [] Angular views: Segments (list/create/edit/delete) + segment rule JSON editor minimal
-- [] Angular integration: panggil API `/v1/...` + error handling + correlation-id display
-- [] Angular realtime: subscribe perubahan flag via WebSocket (optional; setelah broadcaster siap)
+- [x] Angular views: Projects (list/create)
+- [x] Angular views: Environments (list/create per project)
+- [x] Angular views: Flags (list/create/edit/delete) + rule builder minimal + rollout editor
+- [x] Angular views: Segments (list/create/edit/delete) + segment rule JSON editor minimal
+- [x] Angular integration: panggil API `/api/...` + error handling + correlation-id display
+- [x] Angular realtime: subscribe perubahan flag via WebSocket (optional; setelah broadcaster siap)
 - [] Angular UX parity: naming/structure mengikuti GrowthBook (minimalkan relearning)
 
 - [x] WebSocket broadcaster untuk service-to-service subscribe (consume RabbitMQ → push ke WS clients)

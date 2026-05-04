@@ -14,10 +14,15 @@ import (
 type EnvironmentsHandler struct {
 	list   *usecase.ListEnvironmentsUsecase
 	create *usecase.CreateEnvironmentUsecase
+	delete *usecase.DeleteEnvironmentUsecase
 }
 
-func NewEnvironmentsHandler(list *usecase.ListEnvironmentsUsecase, create *usecase.CreateEnvironmentUsecase) *EnvironmentsHandler {
-	return &EnvironmentsHandler{list: list, create: create}
+func NewEnvironmentsHandler(
+	list *usecase.ListEnvironmentsUsecase,
+	create *usecase.CreateEnvironmentUsecase,
+	delete *usecase.DeleteEnvironmentUsecase,
+) *EnvironmentsHandler {
+	return &EnvironmentsHandler{list: list, create: create, delete: delete}
 }
 
 type createEnvironmentRequest struct {
@@ -57,4 +62,14 @@ func (h *EnvironmentsHandler) Create(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"environment": out, "correlationId": response.CorrelationID(c)})
+}
+
+func (h *EnvironmentsHandler) Delete(c *gin.Context) {
+	projectID := c.Param("projectId")
+	envKey := c.Param("environmentKey")
+	if err := h.delete.Execute(c.Request.Context(), projectID, envKey); err != nil {
+		response.AbortErr(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
 }

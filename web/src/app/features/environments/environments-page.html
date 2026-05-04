@@ -1,0 +1,57 @@
+<section class="page">
+  <header>
+    <div>
+      <p class="eyebrow">Project {{ projectId() }}</p>
+      <h1>Environments</h1>
+    </div>
+    <div class="page-actions">
+      <app-wiki-button wikiId="environments" />
+      <button type="button" class="btn btn--ghost" (click)="reload()">
+        <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  <p *ngIf="error()" class="error">{{ error() }}</p>
+
+  <form (ngSubmit)="create()" class="form">
+    <label class="field">
+      Key
+      <input name="key" placeholder="e.g. production" [(ngModel)]="form.key" required />
+    </label>
+    <label class="field">
+      Name
+      <input name="name" placeholder="e.g. Production" [(ngModel)]="form.name" required />
+    </label>
+    <label class="field">
+      Sort order
+      <input name="sortOrder" type="number" placeholder="0" [(ngModel)]="form.sortOrder" />
+    </label>
+    <button type="submit" class="btn btn--primary">
+      <i class="fa-solid fa-plus" aria-hidden="true"></i>
+      Create environment
+    </button>
+  </form>
+
+  <div class="list-card" aria-label="Environments">
+    <article *ngFor="let env of environments()" class="list-row">
+      <div class="list-row__main">
+        <span class="list-row__icon"><i class="fa-solid fa-layer-group" aria-hidden="true"></i></span>
+        <div>
+          <strong>{{ name(env) }}</strong>
+          <code>{{ key(env) }}</code>
+        </div>
+      </div>
+      <div class="row-actions">
+        <a class="btn btn--ghost" [routerLink]="['/dashboard/projects', projectId(), 'environments', key(env), 'flags']">
+          <i class="fa-solid fa-flag" aria-hidden="true"></i>
+          Manage flags
+        </a>
+        <button type="button" class="btn btn--icon btn--danger" (click)="remove(env)" [attr.aria-label]="'Delete environment ' + name(env)">
+          <i class="fa-solid fa-trash" aria-hidden="true"></i>
+        </button>
+      </div>
+    </article>
+  </div>
+</section>

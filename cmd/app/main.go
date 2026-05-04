@@ -48,7 +48,7 @@ func main() {
 		}),
 	)
 
-	router := gin.Default()
+	router := gin.New()
 	router.MaxMultipartMemory = 10 << 20 // 10 MiB
 	router.RemoveExtraSlash = true
 
@@ -58,16 +58,21 @@ func main() {
 		gin.SetMode(gin.DebugMode)
 	}
 
-	// Setup CORS, Middleware
+	// Credentialed CORS cannot use AllowOrigins: *; use AllowOriginFunc (see CORS_ALLOWED_ORIGINS, config.IsCORSOriginAllowed).
+	cfg := app.Config
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"},
+		AllowOriginFunc: func(origin string) bool {
+			return cfg.IsCORSOriginAllowed(origin)
+		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"User-Agent", "Content-Type", "X-Forwaded-For"},
-		ExposeHeaders:    []string{"Content-Length"},
+		AllowHeaders:     []string{"User-Agent", "Content-Type", "X-Forwarded-For", "X-Correlation-ID", "X-CSRF-Token", "Idempotency-Key", "If-Match"},
+		ExposeHeaders:    []string{"Content-Length", "X-Correlation-ID", "X-Schema-Migration-State"},
 		AllowCredentials: true,
 	}))
 	router.Use(helmet.Default())
-	router.Use(gzip.Gzip(gzip.BestCompression))
+	// Do not gzip /app/* — dashboard SSR is reverse-proxied from Node/Express; wrapping that
+	// stream breaks Content-Encoding / Content-Length (browser "Content Encoding Error").
+	router.Use(gzip.Gzip(gzip.BestCompression, gzip.WithExcludedPaths([]string{"/app"})))
 
 	// Limit the request body size to 2MB (2 * 1024 * 1024 bytes)
 	router.Use(func(c *gin.Context) {
@@ -84,7 +89,12 @@ func main() {
 	router.GET("/health", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{"status": true, "message": "OK Service Running"})
 	})
+	csrf := middleware.NewCSRFProtection(app.Config.Security.CSRFSecret, app.Config.Security.CSRFSessionKey)
 	deliveryhttp.RegisterV1Routes(router, app)
+	deliveryhttp.RegisterAPIRoutes(router, app, csrf)
+	if err := deliveryhttp.RegisterDashboardSSRProxy(router, app.Config); err != nil {
+		log.Fatalf("failed to register dashboard SSR proxy: %v", err)
+	}
 
 	// not found route
 	router.NoRoute(func(ctx *gin.Context) {

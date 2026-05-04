@@ -24,7 +24,7 @@ func NewDashboardHandler(admin repository.AdminReadRepository, rollback *usecase
 
 func (h *DashboardHandler) ListFlagVersions(c *gin.Context) {
 	scope := valueobject.Scope{ProjectID: c.Param("projectId"), EnvironmentKey: c.Param("environmentKey")}
-	flagID := c.Param("flagId")
+	flagID := c.Param("flagKey")
 	rows, err := h.admin.ListFlagVersions(c.Request.Context(), scope, flagID)
 	if err != nil {
 		response.AbortErr(c, err)
@@ -35,7 +35,7 @@ func (h *DashboardHandler) ListFlagVersions(c *gin.Context) {
 
 func (h *DashboardHandler) DiffFlagVersions(c *gin.Context) {
 	scope := valueobject.Scope{ProjectID: c.Param("projectId"), EnvironmentKey: c.Param("environmentKey")}
-	flagID := c.Param("flagId")
+	flagID := c.Param("flagKey")
 	v1, err1 := strconv.Atoi(c.Query("v1"))
 	v2, err2 := strconv.Atoi(c.Query("v2"))
 	if err1 != nil || err2 != nil || v1 <= 0 || v2 <= 0 {
@@ -80,7 +80,7 @@ func (h *DashboardHandler) Rollback(c *gin.Context) {
 		return
 	}
 	scope := valueobject.Scope{ProjectID: c.Param("projectId"), EnvironmentKey: c.Param("environmentKey")}
-	flagID := c.Param("flagId")
+	flagID := c.Param("flagKey")
 	out, err := h.rollback.Execute(c.Request.Context(), scope, flagID, req.TargetVersion, req.Version)
 	if err != nil {
 		response.AbortErr(c, err)

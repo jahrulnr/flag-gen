@@ -141,7 +141,7 @@ func (h *FlagsHandler) Create(c *gin.Context) {
 
 func (h *FlagsHandler) Update(c *gin.Context) {
 	scope := valueobject.Scope{ProjectID: c.Param("projectId"), EnvironmentKey: c.Param("environmentKey")}
-	flagID := c.Param("flagId")
+	flagID := c.Param("flagKey")
 
 	body, raw, err := readBody(c)
 	if err != nil {
@@ -170,7 +170,7 @@ func (h *FlagsHandler) Update(c *gin.Context) {
 
 func (h *FlagsHandler) Delete(c *gin.Context) {
 	scope := valueobject.Scope{ProjectID: c.Param("projectId"), EnvironmentKey: c.Param("environmentKey")}
-	flagID := c.Param("flagId")
+	flagID := c.Param("flagKey")
 	versionStr := c.Query("version")
 	if versionStr == "" {
 		versionStr = c.GetHeader("If-Match")

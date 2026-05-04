@@ -1,0 +1,93 @@
+<section class="page">
+  <header>
+    <div>
+      <p class="eyebrow">{{ projectId() }} / {{ environmentKey() }}</p>
+      <h1>Flags</h1>
+    </div>
+    <div class="page-actions">
+      <app-wiki-button wikiId="flags" />
+      <button type="button" class="btn btn--ghost" (click)="reload()">
+        <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  <p *ngIf="error()" class="error">{{ error() }}</p>
+
+  <form (ngSubmit)="form.id ? update() : create()" class="form wide">
+    <label class="field">
+      Key
+      <input name="key" placeholder="e.g. checkout_v2" [(ngModel)]="form.key" required />
+    </label>
+    <label class="field">
+      Name
+      <input name="name" placeholder="e.g. Checkout V2" [(ngModel)]="form.name" required />
+    </label>
+    <label class="field field--full">
+      Description <span class="optional">(optional)</span>
+      <input name="description" placeholder="What this flag controls" [(ngModel)]="form.description" />
+    </label>
+    <label class="field field--check">
+      <span>Enabled</span>
+      <input name="enabled" type="checkbox" [(ngModel)]="form.enabled" />
+    </label>
+    <label class="field field--check">
+      <span>Client-side</span>
+      <input name="clientSide" type="checkbox" [(ngModel)]="form.clientSide" />
+    </label>
+    <label class="field">
+      Value type
+      <select name="valueType" [(ngModel)]="form.valueType">
+        <option value="boolean">Boolean</option>
+        <option value="json">JSON</option>
+      </select>
+    </label>
+    <label class="field">
+      Default value
+      <input name="defaultValue" placeholder="e.g. false" [(ngModel)]="form.defaultValue" />
+    </label>
+    <label class="field">
+      Rollout %
+      <input name="rolloutPercentage" type="number" placeholder="e.g. 50" [(ngModel)]="form.rolloutPercentage" />
+    </label>
+    <label class="field">
+      Rollout stickiness
+      <input name="rolloutStickiness" placeholder="e.g. userId" [(ngModel)]="form.rolloutStickiness" />
+    </label>
+    <label class="field field--full">
+      Rules JSON
+      <small class="hint">Targeting rules array (JSON). Leave as [] if none.</small>
+      <textarea name="rulesJson" [(ngModel)]="form.rulesJson" rows="4" placeholder='e.g. []'></textarea>
+    </label>
+    <button type="submit" class="btn btn--primary">
+      <i class="fa-solid" [class.fa-pen]="form.id" [class.fa-plus]="!form.id" aria-hidden="true"></i>
+      {{ form.id ? 'Update flag' : 'Create flag' }}
+    </button>
+  </form>
+
+  <div class="list-card" aria-label="Flags">
+    <article *ngFor="let flag of flags()" class="list-row">
+      <div class="list-row__main">
+        <span class="list-row__icon"><i class="fa-solid fa-flag" aria-hidden="true"></i></span>
+        <div>
+          <strong>{{ name(flag) }}</strong>
+          <code>{{ key(flag) }} · v{{ version(flag) }}</code>
+        </div>
+      </div>
+      <div class="row-actions">
+        <button type="button" class="btn btn--ghost" (click)="edit(flag)">
+          <i class="fa-solid fa-pen" aria-hidden="true"></i>
+          Edit
+        </button>
+        <a class="btn btn--ghost" [routerLink]="['/dashboard/projects', projectId(), 'environments', environmentKey(), 'flags', id(flag), 'history']">
+          <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+          History
+        </a>
+        <button type="button" class="btn btn--icon btn--danger" (click)="remove(flag)" [attr.aria-label]="'Delete flag ' + name(flag)">
+          <i class="fa-solid fa-trash" aria-hidden="true"></i>
+        </button>
+      </div>
+    </article>
+  </div>
+</section>

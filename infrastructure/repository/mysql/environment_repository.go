@@ -95,3 +95,20 @@ WHERE project_id = ? AND ` + "`key`" + ` = ? AND deleted_at IS NULL`
 	}
 	return &e, nil
 }
+
+func (r *EnvironmentRepository) SoftDelete(ctx context.Context, projectID, environmentKey string) error {
+	now := time.Now().UTC()
+	const q = `
+UPDATE environments
+SET deleted_at = ?, updated_at = ?, version = version + 1
+WHERE project_id = ? AND ` + "`key`" + ` = ? AND deleted_at IS NULL`
+	res, err := r.db.ExecContext(ctx, q, now, now, projectID, environmentKey)
+	if err != nil {
+		return apperror.NewInfrastructureError("DB", "environment soft delete failed", err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return apperror.NewNotFoundError("Environment", sql.ErrNoRows)
+	}
+	return nil
+}
