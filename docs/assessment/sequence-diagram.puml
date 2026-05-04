@@ -1,0 +1,309 @@
+@startuml feature_flagging_service_workflow
+
+title Feature Flagging Service Workflow (HTTP + WebSocket Broadcast)
+
+actor Developer
+actor "Backend Service / SDK" as Service
+participant "Angular Dashboard" as Dashboard
+participant "Presentation\nLayer" as PL
+participant "Application\nLayer" as AL
+participant "Domain\nLayer" as DL
+participant "Infrastructure\nLayer" as IL
+database "MySQL" as DB
+collections "Ristretto\nL1 Cache" as L1
+database "Redis\nL2 Cache" as CACHE
+queue "Outbox\nDispatcher" as OUTBOX
+queue "Message Broker" as MQ
+participant "WebSocket\nBroadcaster" as WS
+collections "Snapshot Files" as SNAP
+participant "In-memory\nReconnect Events" as RECON
+participant "Circuit\nBreaker" as CB
+
+note over Dashboard, Service
+    Dashboard/admin workflows use HTTP commands and query-side reads.
+    Service-to-service consumers connect over WebSocket, receive all
+    scoped flags, then wait for committed change broadcasts.
+end note
+
+== Service WebSocket Connect and Initial Flag State ==
+Service -> WS: Connect /v1/broadcast/flags(projectId, environmentKey)
+WS -> AL: Load authorized flag state for scope
+AL -> L1: Get scoped flag read model
+
+alt L1 Hit
+L1 --> AL: Full scoped flag set
+else L1 Miss
+AL -> AL: Start per-scope singleflight refill
+AL -> CACHE: Get scoped flag read model
+
+alt L2 Hit
+CACHE --> AL: Full scoped flag set
+AL -> L1: Refill L1 with scoped flag set
+else L2 Miss, Redis Failure, or Recovery
+AL -> IL: Load flag definitions
+
+alt DB Available
+IL -> DB: Query flags, rules, segments
+DB --> IL: Current committed definitions
+AL -> CACHE: Refill L2 with scoped flag set
+AL -> L1: Refill L1 with scoped flag set
+IL --> AL: Full scoped flag set
+else DB Failure
+AL -> CB: Record DB failure for scope
+IL -> SNAP: Load newest valid snapshot
+SNAP --> IL: Snapshot flag definitions
+note over AL, L1
+    Degraded cache fill: entries populated from file fallback
+    use a short TTL (e.g., 1 hour) and must be singleflight-guarded.
+end note
+AL -> L1: Refill L1 with snapshot data (short TTL)
+alt Redis reachable (L2 available)
+AL -> CACHE: Refill L2 with snapshot data (short TTL)
+else Redis unreachable
+AL -> AL: Skip L2 refill
+end
+IL --> AL: Full scoped flag set from snapshot
+end
+end
+end
+
+AL --> WS: Full scoped flag set
+WS -> Service: WebSocket flags.snapshot(flags, scopeVersion)
+Service -> Service: Replace/build local read state
+
+note over WS, Service
+    flag-gen is the WebSocket server.
+    If a client disconnects, the client reconnects.
+    On reconnect, flag-gen repeats this full scoped snapshot flow.
+end note
+
+== Redis Disconnect and Reconnect ==
+AL -> CACHE: Read/write cache
+CACHE --> AL: Connection error
+AL -> RECON: Publish redis.disconnected event
+RECON -> IL: Start reconnect if mutex is free
+
+alt Reconnect mutex acquired
+IL -> CACHE: Reconnect with backoff
+CACHE --> IL: Reconnected
+IL -> DB: Reload hot read models if needed
+DB --> IL: Current committed definitions
+IL -> CACHE: Refill cache
+else Reconnect already running
+RECON -> RECON: Drop/merge duplicate reconnect event
+end
+
+AL -> IL: Continue read without Redis
+
+alt DB Available
+IL -> DB: Try DB read
+DB --> IL: Current committed definitions
+else DB unavailable during Redis outage
+IL -> SNAP: Load newest valid snapshot
+SNAP --> IL: Snapshot flag definitions
+end
+
+== Flag Creation / Update with Transactional Outbox ==
+Developer -> Dashboard: Create or update flag
+Dashboard -> PL: POST /v1/projects/{projectId}/environments/{env}/flags
+PL -> AL: CreateFlagCommand(actor, idempotencyKey)
+AL -> DL: Flag.create()
+DL -> DL: Validate key, value, rules, rollout
+DL --> AL: FlagCreated event
+
+AL -> IL: Begin unit of work
+IL -> DB: BEGIN
+IL -> DB: INSERT/UPDATE flag
+IL -> DB: INSERT flag_version
+IL -> DB: INSERT audit_entry
+IL -> DB: INSERT outbox_event(eventId, aggregateVersion)
+IL -> DB: COMMIT
+IL --> AL: Committed flag state and outbox event
+AL --> PL: Command result with version and outboxEventId
+PL --> Dashboard: 201 Created / 200 OK
+AL -> SNAP: Refresh snapshot from committed state
+
+note over DB, OUTBOX
+    DB commit is the consistency boundary.
+    Message publish is async and retryable.
+    Snapshot files are advanced only after
+    the mutation flow succeeds.
+end note
+
+== Outbox Dispatch and Broadcast ==
+OUTBOX -> DB: Poll pending outbox events
+DB --> OUTBOX: FlagCreated/FlagUpdated event
+OUTBOX -> MQ: Publish flag change event
+
+alt Publish Success
+MQ --> OUTBOX: Ack
+OUTBOX -> DB: Mark event as published
+MQ -> WS: Deliver flag change event
+WS -> Service: WebSocket flag.updated/deleted(eventId, flag payload, scopeVersion, version)
+Service -> Service: Deduplicate event and upsert/delete local read state
+else Publish Failure
+MQ --> OUTBOX: Publish failed
+OUTBOX -> DB: Increment retry count; keep pending
+OUTBOX -> OUTBOX: Retry with backoff
+end
+
+== HTTP Bootstrap / Recovery Evaluation ==
+Service -> PL: POST /v1/projects/{projectId}/environments/{env}/flags/evaluate
+PL -> AL: EvaluateFlagsQuery(context, flagKeys)
+AL -> L1: Get scoped flag read model
+
+alt L1 Hit
+L1 --> AL: Flag definitions
+else L1 Miss
+AL -> AL: Start per-scope singleflight refill
+AL -> CACHE: Get scoped flag read model
+
+alt L2 Hit
+CACHE --> AL: Flag definitions
+AL -> L1: Refill L1
+else L2 Miss or Redis Failure
+AL -> IL: Load flag definitions
+
+alt DB Available
+IL -> DB: Query flags, rules, segments
+DB --> IL: Current committed definitions
+IL -> SNAP: Create snapshot if missing
+AL -> CACHE: Refill L2
+AL -> L1: Refill L1
+IL --> AL: Flag definitions from database
+else Flag Not Found
+IL -> DB: Query flag by key
+DB --> IL: No matching flag
+AL -> L1: Store not-found marker TTL=5m
+IL --> AL: Flag not found
+else DB Failure
+AL -> CB: Record DB failure for scope
+IL -> SNAP: Load newest valid snapshot
+
+alt Snapshot Valid
+SNAP --> IL: Snapshot data with version/checksum
+note over AL, L1
+    Degraded cache fill: entries populated from file fallback
+    use a short TTL (e.g., 1 hour) and must be singleflight-guarded.
+end note
+AL -> L1: Refill L1 with snapshot data (short TTL)
+alt Redis reachable (L2 available)
+AL -> CACHE: Refill L2 with snapshot data (short TTL)
+else Redis unreachable
+AL -> AL: Skip L2 refill
+end
+IL --> AL: Flag definitions from snapshot
+else Snapshot Missing or Corrupted
+SNAP --> IL: Invalid snapshot
+AL -> CB: Open circuit breaker
+IL --> AL: No readable fallback available
+AL --> PL: 503 service_degraded
+end
+end
+
+end
+end
+
+note over AL, PL
+    For HTTP remote reads, if L1/L2 miss, DB is unavailable,
+    and no valid snapshot exists, the flow ends with 503 and
+    opens the circuit breaker. It must not silently return a
+    successful default evaluation unless the endpoint explicitly
+    supports degraded defaults.
+end note
+
+AL -> DL: Flag.evaluate(EvaluationContext)
+DL -> DL: Apply enabled state, rules, and stable rollout
+DL --> AL: EvaluationResult(value, reason, source, version)
+AL --> PL: Evaluation response
+PL --> Service: 200 OK
+Service -> Service: Execute feature logic
+
+== HTTP Flag Not Found Negative Cache ==
+Service -> PL: GET /v1/.../flags/missing_flag/evaluate
+PL -> AL: EvaluateFlagQuery(flagKey)
+AL -> L1: Check flag and not-found marker
+
+alt L1 Not-found Marker Hit
+L1 --> AL: not-found marker
+AL --> PL: 404 flag_not_found
+else Marker Miss
+AL -> CACHE: Check L2/DB through normal read path
+AL -> L1: Store not-found marker TTL=5m if DB confirms missing
+AL --> PL: 404 flag_not_found
+end
+
+== Read Failure Circuit Breaker ==
+Service -> PL: GET /v1/.../flags/evaluate
+PL -> AL: EvaluateFlagsQuery
+AL -> L1: Cache miss
+AL -> CACHE: Cache miss or unavailable
+AL -> CB: Check breaker state
+
+alt Circuit Open
+CB --> AL: open
+AL --> PL: 503 circuit_open or valid fallback response
+else Circuit Closed or Half-open
+AL -> DB: Try DB read
+DB --> AL: Connection failure
+AL -> SNAP: Try newest valid snapshot
+SNAP --> AL: Missing or corrupted
+AL -> CB: Open breaker with backoff
+AL --> PL: 503 service_degraded
+end
+
+== Runtime Evaluation from Local State ==
+Service -> Service: Evaluate flag from local read state/cache
+Service -> Service: Apply enabled state, rules, and stable rollout
+Service -> Service: Execute feature logic without DB dependency
+
+== Concurrent Update Handling ==
+Developer -> Dashboard: Update flag using version=1
+Dashboard -> PL: PATCH /v1/projects/{projectId}/environments/{env}/flags/{flagId}
+PL -> AL: UpdateFlagCommand(version=1)
+AL -> DL: Flag.update()
+DL -> DL: Check current version
+
+alt Version Matches
+DL --> AL: Valid update
+AL -> IL: Commit flag + version + audit + outbox event
+IL -> DB: UPDATE flag SET version=2 WHERE version=1
+DB --> IL: Updated
+AL --> PL: 200 OK
+PL --> Dashboard: Update successful
+else Version Conflict
+DL --> AL: Version mismatch
+AL -> AL: Log conflict with correlation ID
+AL --> PL: 409 Conflict
+PL --> Dashboard: Version outdated
+end
+
+== Snapshot Corruption During Failover ==
+Service -> PL: POST /v1/projects/{projectId}/environments/{env}/flags/evaluate while DB unavailable
+PL -> AL: EvaluateFlagsQuery
+AL -> IL: Load fallback snapshot
+IL -> SNAP: Read snapshot
+SNAP --> IL: Checksum mismatch
+IL -> IL: Log corruption and mark snapshot invalid
+IL --> AL: Safe defaults
+AL -> DL: Evaluate using safe defaults
+DL --> AL: EvaluationResult(source="default")
+AL --> PL: Degraded evaluation result
+PL --> Service: 200 OK with fallback metadata
+
+note over DL
+    Domain layer owns flag invariants, rule matching,
+    stable rollout, and evaluation result reasons.
+end note
+
+note over IL, DB
+    Infrastructure persists aggregate state, versions,
+    audit entries, outbox records, cache entries, and snapshots.
+end note
+
+note over OUTBOX, WS
+    Outbox plus idempotent consumers avoids rollback of
+    already-published messages and minimizes update errors.
+end note
+
+@enduml

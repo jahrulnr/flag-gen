@@ -1,0 +1,47 @@
+@startuml Feature Flags Sequence Diagram
+
+title Feature Flags Workflow
+
+actor User
+participant "Application" as App
+participant "Feature Flag Service" as FFS
+participant "Developer" as Dev
+participant "Monitoring System" as Mon
+
+note right: Feature flags allow dynamic control of application behavior without code changes
+
+User -> App: Request feature
+App -> FFS: Check feature flag status
+FFS --> App: Return flag value (true/false)
+
+alt Flag is enabled
+    App -> App: Execute new feature logic
+    App --> User: Show new feature UI
+    note right: New feature is active for this user
+else Flag is disabled
+    App -> App: Execute old feature logic
+    App --> User: Show old feature UI
+    note right: Fallback to existing behavior
+end
+
+App -> Mon: Log feature usage metrics
+
+note over Dev: Developer monitors feature performance
+
+Dev -> FFS: Update flag configuration
+note right: Adjust targeting rules, percentage rollout, etc.
+
+Dev -> Mon: Review analytics
+Mon --> Dev: Provide insights (conversion rates, errors)
+
+alt Feature successful
+    Dev -> FFS: Gradually increase rollout
+    note right: Increase percentage from 10% to 100%
+else Issues detected
+    Dev -> FFS: Disable flag immediately
+    note right: Emergency rollback without redeployment
+end
+
+note over Dev, FFS: Once feature is stable, flag can be removed from code
+
+@enduml

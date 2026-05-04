@@ -1,0 +1,186 @@
+@startuml domain_diagram
+title MVP Domain Class Diagram - Feature Flagging Service
+left to right direction
+skinparam packageStyle rectangle
+
+package "Flag Management Context" <<BoundedContext>> {
+  class Project <<AggregateRoot>> {
+    -id: ProjectId [required]
+    -key: ProjectKey [required]
+    -name: string [required]
+  }
+
+  class Environment <<Entity>> {
+    -id: EnvironmentId [required]
+    -projectId: ProjectId [required]
+    -key: EnvironmentKey [required]
+    -name: string [required]
+    -version: int [required]
+  }
+
+  class Flag <<AggregateRoot>> {
+    -id: FlagId [required]
+    -projectId: ProjectId [required]
+    -environmentKey: EnvironmentKey [required]
+    -key: FlagKey [required]
+    -name: string [required]
+    -description: string = "" [optional]
+    -enabled: bool = false [required]
+    -clientSide: bool = false [required]
+    -value: FlagValue [required]
+    -rules: []FlagRule = [] [optional]
+    -rollout: RolloutConfig [optional]
+    -version: int [required]
+    +Enable()
+    +Disable()
+    +UpdateValue(value FlagValue)
+    +AddRule(rule FlagRule)
+    +Evaluate(context EvaluationContext) EvaluationResult
+  }
+
+  class FlagValue <<ValueObject>> {
+    -type: FlagValueType [required]
+    -default: interface{} [required]
+  }
+
+  class FlagRule <<Entity>> {
+    -id: RuleId [required]
+    -attribute: string [required]
+    -operator: ComparisonOperator [required]
+    -value: interface{} [required]
+    -serve: interface{} [required]
+    -priority: int = 0 [optional]
+  }
+
+  class RolloutConfig <<ValueObject>> {
+    -percentage: float64 [required]
+    -stickiness: string = "userId" [required]
+  }
+
+  class FlagVersion <<Entity>> {
+    -id: VersionId [required]
+    -flagId: FlagId [required]
+    -version: int [required]
+    -data: FlagSnapshot [required]
+    -createdBy: ActorId [required]
+    -createdAt: time.Time [required]
+    -changeType: ChangeType [required]
+  }
+
+  class AuditEntry <<Entity>> {
+    -id: AuditId [required]
+    -entityId: string [required]
+    -entityType: string [required]
+    -action: AuditAction [required]
+    -actorId: ActorId [required]
+    -timestamp: time.Time [required]
+    -oldValue: interface{} [optional]
+    -newValue: interface{} [optional]
+  }
+
+  class FlagCreated <<DomainEvent>>
+  class FlagUpdated <<DomainEvent>>
+  class FlagDeleted <<DomainEvent>>
+}
+
+package "Targeting Context" <<BoundedContext>> {
+  class Segment <<AggregateRoot>> {
+    -id: SegmentId [required]
+    -projectId: ProjectId [required]
+    -name: SegmentName [required]
+    -rules: []TargetingRule = [] [optional]
+    +Matches(context EvaluationContext) bool
+  }
+
+  class TargetingRule <<ValueObject>> {
+    -attribute: string [required]
+    -operator: ComparisonOperator [required]
+    -value: interface{} [required]
+  }
+}
+
+package "Evaluation Context" <<BoundedContext>> {
+  class EvaluationContext <<ValueObject>> {
+    -userId: string [optional]
+    -attributes: map[string]interface{} = {} [optional]
+  }
+
+  class EvaluationResult <<ValueObject>> {
+    -flagKey: FlagKey [required]
+    -value: interface{} [required]
+    -version: int [required]
+    -reason: EvaluationReason [required]
+    -matchedRuleId: RuleId [optional]
+    -source: EvaluationSource [required]
+  }
+
+  class RolloutBucket <<ValueObject>> {
+    -bucketKey: string [required]
+    -percentage: float64 [required]
+    +Matches(config RolloutConfig) bool
+  }
+}
+
+package "Integration Context" <<BoundedContext>> {
+  class APIKey <<Entity>> {
+    -id: APIKeyId [required]
+    -projectId: ProjectId [required]
+    -environmentKey: EnvironmentKey [optional]
+    -scopes: []Scope [required]
+  }
+
+  class OutboxEvent <<Entity>> {
+    -id: EventId [required]
+    -aggregateId: string [required]
+    -aggregateVersion: int [required]
+    -type: string [required]
+    -payload: []byte [required]
+    -status: OutboxStatus [required]
+    -retryCount: int = 0 [required]
+    -createdAt: time.Time [required]
+    -publishedAt: time.Time [optional]
+  }
+
+  class SnapshotMetadata <<ValueObject>> {
+    -projectId: ProjectId [required]
+    -environmentKey: EnvironmentKey [required]
+    -scopeVersion: int [required]
+    -checksum: string [required]
+    -generatedAt: time.Time [required]
+  }
+}
+
+' Relationships
+Project "1" o-- "1..*" Environment : environments
+Environment "1" o-- "0..*" Flag : flags
+Flag "1" o-- "0..*" FlagRule : rules
+Flag "1" o-- "0..*" FlagVersion : versions
+Flag "1" --> "1" FlagValue : default value
+Flag "1" --> "0..1" RolloutConfig : rollout
+FlagVersion "1" --> "1" AuditEntry : creates audit
+Segment "1" o-- "0..*" TargetingRule : rules
+FlagUpdated "1" --> "1" OutboxEvent : recorded as
+FlagCreated "1" --> "1" OutboxEvent : recorded as
+FlagDeleted "1" --> "1" OutboxEvent : recorded as
+EvaluationContext "1" --> "0..*" Segment : can match
+EvaluationResult "1" --> "1" Flag : describes
+
+note right of Flag
+  MVP aggregate for flag management.
+  Supports boolean/JSON values, simple rules,
+  stable rollout, optimistic locking, and audit history.
+end note
+
+note right of OutboxEvent
+  Stored in the same DB transaction as flag mutations.
+  Dispatcher publishes later; consumers deduplicate by
+  event id and aggregate version.
+end note
+
+note right of SnapshotMetadata
+  File-backed fallback snapshots are read-through copies,
+  not co-primary persistence. Checksum and version protect
+  against stale or corrupted reads.
+end note
+
+@enduml

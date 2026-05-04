@@ -1,0 +1,14 @@
+DROP TABLE IF EXISTS snapshot_metadata;
+DROP TABLE IF EXISTS outbox_events;
+DROP TABLE IF EXISTS idempotency_keys;
+DROP TABLE IF EXISTS api_keys;
+DROP TABLE IF EXISTS audit_entries;
+DROP TABLE IF EXISTS flag_versions;
+DROP TABLE IF EXISTS flag_rules;
+DROP TABLE IF EXISTS flags;
+DROP TABLE IF EXISTS segments;
+DROP TABLE IF EXISTS environments;
+DROP TABLE IF EXISTS projects;
+DROP TABLE IF EXISTS schema_migrations;
+DROP TABLE IF EXISTS user_sessions;
+DROP TABLE IF EXISTS users;
