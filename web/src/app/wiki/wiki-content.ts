@@ -124,7 +124,8 @@ export const WIKI_CONTENT: Record<WikiId, WikiContent> = {
         title: 'When editing',
         bullets: [
           'Use History after changes to confirm version and change type.',
-          'Keep Rules JSON valid and leave it as [] when no targeting is needed.',
+          'Targeting rules are evaluated before rollout. Each rule matches a context attribute, such as country or plan, and serves the value configured in the rule.',
+          'Leave Targeting rules as [] when the flag should use only the default value and rollout percentage.',
         ],
       },
     ],

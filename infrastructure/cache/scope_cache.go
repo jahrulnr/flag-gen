@@ -109,7 +109,7 @@ func (c *ScopedFlagCache) Get(ctx context.Context, scope valueobject.Scope) ([]e
 			return flags, nil
 		}
 
-		flags, err := c.flagsRepo.ListByScope(ctx, scope)
+		flags, _, err := c.flagsRepo.ListByScope(ctx, scope, "", 500, 0)
 		if err == nil {
 			_ = c.l2.Set(ctx, key, flags, DefaultL2TTL)
 			c.l1.Set(key, flags, DefaultL1TTL)

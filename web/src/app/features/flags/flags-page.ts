@@ -9,6 +9,7 @@ import { applyApiFailureToSignals } from '../../core/user-facing-api-error';
 import { ProjectDirectoryService } from '../../core/project-directory.service';
 import { DestructiveConfirmDialogComponent } from '../../ui/destructive-confirm-dialog/destructive-confirm-dialog.component';
 import { InlineApiErrorComponent } from '../../ui/inline-api-error/inline-api-error.component';
+import { ListToolbarComponent } from '../../ui/list-toolbar/list-toolbar.component';
 import { WikiButtonComponent } from '../../wiki/wiki-button.component';
 import { RealtimeService } from '../realtime/realtime.service';
 
@@ -21,6 +22,7 @@ import { RealtimeService } from '../realtime/realtime.service';
     WikiButtonComponent,
     DestructiveConfirmDialogComponent,
     InlineApiErrorComponent,
+    ListToolbarComponent,
   ],
   templateUrl: './flags-page.html',
   styleUrl: './flags-page.scss',
@@ -36,6 +38,12 @@ export class FlagsPage implements OnInit {
   readonly flags = signal<Flag[]>([]);
   readonly error = signal<string | null>(null);
   readonly errorRef = signal<string | null>(null);
+  readonly total = signal(0);
+  readonly limit = signal(50);
+  readonly offset = signal(0);
+  readonly q = signal('');
+  readonly loading = signal(false);
+  readonly valueTypeMenuOpen = signal(false);
 
   readonly destroyDialog = viewChild.required(DestructiveConfirmDialogComponent);
 
@@ -56,10 +64,38 @@ export class FlagsPage implements OnInit {
     }
     this.error.set(null);
     this.errorRef.set(null);
-    this.api.get<{ flags: Flag[] }>(this.flagsPath()).subscribe({
-      next: (res) => this.flags.set(res.flags ?? []),
+    this.loading.set(true);
+    const query = new URLSearchParams({
+      q: this.q(),
+      limit: String(this.limit()),
+      offset: String(this.offset()),
+    });
+    this.api.get<{ flags: Flag[]; total?: number; limit?: number; offset?: number }>(`${this.flagsPath()}?${query.toString()}`).subscribe({
+      next: (res) => {
+        this.flags.set(res.flags ?? []);
+        this.total.set(res.total ?? 0);
+        this.limit.set(res.limit ?? this.limit());
+        this.offset.set(res.offset ?? this.offset());
+        this.loading.set(false);
+      },
       error: (err: unknown) => applyApiFailureToSignals(this.error, this.errorRef, err, 'Failed to load flags'),
     });
+  }
+
+  setQuery(q: string): void {
+    this.q.set(q);
+    this.offset.set(0);
+    this.reload();
+  }
+
+  prevPage(): void {
+    this.offset.set(Math.max(0, this.offset() - this.limit()));
+    this.reload();
+  }
+
+  nextPage(): void {
+    this.offset.set(this.offset() + this.limit());
+    this.reload();
   }
 
   create(): void {
@@ -162,6 +198,24 @@ export class FlagsPage implements OnInit {
       const raw = String(this.form.defaultValue).trim().toLowerCase();
       this.form.defaultValue = raw === 'true' ? 'true' : 'false';
     }
+  }
+
+  valueTypeLabel(): string {
+    return this.form.valueType === 'json' ? 'JSON' : 'Boolean';
+  }
+
+  toggleValueTypeMenu(): void {
+    this.valueTypeMenuOpen.update((open) => !open);
+  }
+
+  closeValueTypeMenu(): void {
+    this.valueTypeMenuOpen.set(false);
+  }
+
+  chooseValueType(valueType: 'boolean' | 'json'): void {
+    this.form.valueType = valueType;
+    this.onValueTypeChange();
+    this.closeValueTypeMenu();
   }
 
   private flagsPath(): string {

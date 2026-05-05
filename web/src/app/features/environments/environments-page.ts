@@ -9,11 +9,20 @@ import { applyApiFailureToSignals } from '../../core/user-facing-api-error';
 import { ProjectDirectoryService } from '../../core/project-directory.service';
 import { DestructiveConfirmDialogComponent } from '../../ui/destructive-confirm-dialog/destructive-confirm-dialog.component';
 import { InlineApiErrorComponent } from '../../ui/inline-api-error/inline-api-error.component';
+import { ListToolbarComponent } from '../../ui/list-toolbar/list-toolbar.component';
 import { WikiButtonComponent } from '../../wiki/wiki-button.component';
 
 @Component({
   selector: 'app-environments-page',
-  imports: [CommonModule, FormsModule, RouterLink, WikiButtonComponent, DestructiveConfirmDialogComponent, InlineApiErrorComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    WikiButtonComponent,
+    DestructiveConfirmDialogComponent,
+    InlineApiErrorComponent,
+    ListToolbarComponent,
+  ],
   templateUrl: './environments-page.html',
   styleUrl: './environments-page.scss',
 })
@@ -26,6 +35,11 @@ export class EnvironmentsPage implements OnInit {
   readonly error = signal<string | null>(null);
   readonly errorRef = signal<string | null>(null);
   readonly destroyDialog = viewChild.required(DestructiveConfirmDialogComponent);
+  readonly total = signal(0);
+  readonly limit = signal(50);
+  readonly offset = signal(0);
+  readonly q = signal('');
+  readonly loading = signal(false);
   form = { key: '', name: '', sortOrder: 0 };
 
   ngOnInit(): void {
@@ -41,10 +55,40 @@ export class EnvironmentsPage implements OnInit {
     }
     this.error.set(null);
     this.errorRef.set(null);
-    this.api.get<{ environments: EnvironmentRow[] }>(`/projects/${this.projectId()}/environments`).subscribe({
-      next: (res) => this.environments.set(res.environments ?? []),
+    this.loading.set(true);
+    const query = new URLSearchParams({
+      q: this.q(),
+      limit: String(this.limit()),
+      offset: String(this.offset()),
+    });
+    this.api
+      .get<{ environments: EnvironmentRow[]; total?: number; limit?: number; offset?: number }>(`/projects/${this.projectId()}/environments?${query.toString()}`)
+      .subscribe({
+        next: (res) => {
+          this.environments.set(res.environments ?? []);
+          this.total.set(res.total ?? 0);
+          this.limit.set(res.limit ?? this.limit());
+          this.offset.set(res.offset ?? this.offset());
+          this.loading.set(false);
+        },
       error: (err: unknown) => applyApiFailureToSignals(this.error, this.errorRef, err, 'Failed to load environments'),
     });
+  }
+
+  setQuery(q: string): void {
+    this.q.set(q);
+    this.offset.set(0);
+    this.reload();
+  }
+
+  prevPage(): void {
+    this.offset.set(Math.max(0, this.offset() - this.limit()));
+    this.reload();
+  }
+
+  nextPage(): void {
+    this.offset.set(this.offset() + this.limit());
+    this.reload();
   }
 
   create(): void {

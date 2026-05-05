@@ -73,7 +73,7 @@ func (p *SnapshotPointer) EnsureConsistent(ctx context.Context, scope valueobjec
 		}
 		return err
 	}
-	flags, err := p.flags.ListByScope(ctx, scope)
+	flags, _, err := p.flags.ListByScope(ctx, scope, "", 500, 0)
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (p *SnapshotPointer) refresh(ctx context.Context, scope valueobject.Scope) 
 	if err != nil {
 		return err
 	}
-	flags, err := p.flags.ListByScope(ctx, scope)
+	flags, _, err := p.flags.ListByScope(ctx, scope, "", 500, 0)
 	if err != nil {
 		return err
 	}

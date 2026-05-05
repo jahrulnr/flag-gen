@@ -3,6 +3,7 @@ package mysql
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 
 	"flag-gen/domain/entity"
@@ -20,16 +21,39 @@ func NewSegmentRepository(db *DB) *SegmentRepository {
 
 var _ repository.SegmentRepository = (*SegmentRepository)(nil)
 
-func (r *SegmentRepository) ListByProject(ctx context.Context, projectID string) ([]entity.Segment, error) {
-	const q = `
+func (r *SegmentRepository) ListByProject(ctx context.Context, projectID, q string, limit, offset int) ([]entity.Segment, int, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	q = strings.TrimSpace(q)
+	const base = `
 SELECT id, project_id, ` + "`key`" + `, name, rules_json, version, created_by, updated_by, created_at, updated_at, deleted_at
 FROM segments
 WHERE project_id = ? AND deleted_at IS NULL
-ORDER BY created_at ASC`
+`
+	args := []any{projectID}
+	where := ""
+	if q != "" {
+		where = " AND (" + "`key`" + " LIKE ? OR name LIKE ?)"
+		like := "%" + q + "%"
+		args = append(args, like, like)
+	}
 
-	rows, err := r.db.QueryContext(ctx, q, projectID)
+	var total int
+	countQ := "SELECT COUNT(1) FROM segments WHERE project_id = ? AND deleted_at IS NULL" + where
+	if err := r.db.QueryRowContext(ctx, countQ, args...).Scan(&total); err != nil {
+		return nil, 0, apperror.NewInfrastructureError("DB", "segments count failed", err)
+	}
+
+	listQ := base + where + " ORDER BY " + "`key`" + " ASC, name ASC LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+
+	rows, err := r.db.QueryContext(ctx, listQ, args...)
 	if err != nil {
-		return nil, apperror.NewInfrastructureError("DB", "segments list failed", err)
+		return nil, 0, apperror.NewInfrastructureError("DB", "segments list failed", err)
 	}
 	defer rows.Close()
 
@@ -41,7 +65,7 @@ ORDER BY created_at ASC`
 		var updatedBy sql.NullString
 		var deletedAt sql.NullTime
 		if err := rows.Scan(&s.ID, &s.ProjectID, &s.Key, &s.Name, &rules, &s.Version, &createdBy, &updatedBy, &s.CreatedAt, &s.UpdatedAt, &deletedAt); err != nil {
-			return nil, apperror.NewInfrastructureError("DB", "segments scan failed", err)
+			return nil, 0, apperror.NewInfrastructureError("DB", "segments scan failed", err)
 		}
 		s.RulesJSON = rules
 		if createdBy.Valid {
@@ -57,9 +81,9 @@ ORDER BY created_at ASC`
 		out = append(out, s)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, apperror.NewInfrastructureError("DB", "segments rows failed", err)
+		return nil, 0, apperror.NewInfrastructureError("DB", "segments rows failed", err)
 	}
-	return out, nil
+	return out, total, nil
 }
 
 func (r *SegmentRepository) Create(ctx context.Context, s entity.Segment) (entity.Segment, error) {

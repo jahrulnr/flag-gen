@@ -16,9 +16,9 @@ func NewListEnvironmentsUsecase(envs repository.EnvironmentRepository) *ListEnvi
 	return &ListEnvironmentsUsecase{envs: envs}
 }
 
-func (u *ListEnvironmentsUsecase) Execute(ctx context.Context, projectID string) ([]entity.Environment, error) {
+func (u *ListEnvironmentsUsecase) Execute(ctx context.Context, projectID, q string, limit, offset int) ([]entity.Environment, int, error) {
 	if projectID == "" {
-		return nil, apperror.NewValidationError(apperror.ValidationError, "missing projectId", nil)
+		return nil, 0, apperror.NewValidationError(apperror.ValidationError, "missing projectId", nil)
 	}
-	return u.envs.ListByProject(ctx, projectID)
+	return u.envs.ListByProject(ctx, projectID, q, limit, offset)
 }

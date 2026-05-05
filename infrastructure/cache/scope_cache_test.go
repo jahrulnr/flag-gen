@@ -67,11 +67,11 @@ type fakeRepo struct {
 func (f *fakeRepo) FindByKey(context.Context, valueobject.Scope, string) (*entity.Flag, error) {
 	return nil, errors.New("unused")
 }
-func (f *fakeRepo) ListByScope(context.Context, valueobject.Scope) ([]entity.Flag, error) {
+func (f *fakeRepo) ListByScope(context.Context, valueobject.Scope, string, int, int) ([]entity.Flag, int, error) {
 	if f.err != nil {
-		return nil, f.err
+		return nil, 0, f.err
 	}
-	return f.flags, nil
+	return f.flags, len(f.flags), nil
 }
 
 func (f *fakeRepo) FindByID(context.Context, valueobject.Scope, string) (*entity.Flag, error) {

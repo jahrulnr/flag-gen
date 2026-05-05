@@ -8,6 +8,7 @@ import { ApiService } from '../../core/api.service';
 import { ProjectDirectoryService } from '../../core/project-directory.service';
 import { ConnectivityService, ConnectivityState } from '../../core/connectivity.service';
 import { Flag, rowID, rowKey, SystemStatus } from '../../core/models';
+import { WorkspaceContextService } from '../../core/workspace-context.service';
 import { RealtimeService } from '../realtime/realtime.service';
 
 @Component({
@@ -19,6 +20,7 @@ import { RealtimeService } from '../realtime/realtime.service';
 export class DashboardShell implements OnInit {
   private readonly api = inject(ApiService);
   readonly projectDirectory = inject(ProjectDirectoryService);
+  private readonly workspace = inject(WorkspaceContextService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly connectivity = inject(ConnectivityService);
@@ -85,6 +87,8 @@ export class DashboardShell implements OnInit {
     if (hist) {
       this.selectedProjectId.set(hist[1]);
       this.selectedEnvironmentKey.set(hist[2]);
+      this.workspace.lastWorkspaceProjectId.set(hist[1]);
+      this.workspace.lastWorkspaceEnvironmentKey.set(hist[2]);
       this.ensureProjectLoaded(hist[1]);
       this.loadHistoryFlagCrumb(hist[1], hist[2], hist[3]);
       return;
@@ -93,6 +97,7 @@ export class DashboardShell implements OnInit {
     if (seg) {
       this.selectedProjectId.set(seg[1]);
       this.selectedEnvironmentKey.set('');
+      this.workspace.lastWorkspaceProjectId.set(seg[1]);
       this.ensureProjectLoaded(seg[1]);
       return;
     }
@@ -100,6 +105,10 @@ export class DashboardShell implements OnInit {
     if (env) {
       this.selectedProjectId.set(env[1]);
       this.selectedEnvironmentKey.set(env[2] ?? '');
+      this.workspace.lastWorkspaceProjectId.set(env[1]);
+      if (env[2]) {
+        this.workspace.lastWorkspaceEnvironmentKey.set(env[2]);
+      }
       this.ensureProjectLoaded(env[1]);
       return;
     }

@@ -9,11 +9,19 @@ import { applyApiFailureToSignals } from '../../core/user-facing-api-error';
 import { ProjectDirectoryService } from '../../core/project-directory.service';
 import { DestructiveConfirmDialogComponent } from '../../ui/destructive-confirm-dialog/destructive-confirm-dialog.component';
 import { InlineApiErrorComponent } from '../../ui/inline-api-error/inline-api-error.component';
+import { ListToolbarComponent } from '../../ui/list-toolbar/list-toolbar.component';
 import { WikiButtonComponent } from '../../wiki/wiki-button.component';
 
 @Component({
   selector: 'app-segments-page',
-  imports: [CommonModule, FormsModule, WikiButtonComponent, DestructiveConfirmDialogComponent, InlineApiErrorComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    WikiButtonComponent,
+    DestructiveConfirmDialogComponent,
+    InlineApiErrorComponent,
+    ListToolbarComponent,
+  ],
   templateUrl: './segments-page.html',
   styleUrl: './segments-page.scss',
 })
@@ -26,6 +34,11 @@ export class SegmentsPage implements OnInit {
   readonly error = signal<string | null>(null);
   readonly errorRef = signal<string | null>(null);
   readonly destroyDialog = viewChild.required(DestructiveConfirmDialogComponent);
+  readonly total = signal(0);
+  readonly limit = signal(50);
+  readonly offset = signal(0);
+  readonly q = signal('');
+  readonly loading = signal(false);
 
   form = this.defaultForm();
 
@@ -42,10 +55,38 @@ export class SegmentsPage implements OnInit {
     }
     this.error.set(null);
     this.errorRef.set(null);
-    this.api.get<{ segments: Segment[] }>(`/projects/${this.projectId()}/segments`).subscribe({
-      next: (res) => this.segments.set(res.segments ?? []),
+    this.loading.set(true);
+    const query = new URLSearchParams({
+      q: this.q(),
+      limit: String(this.limit()),
+      offset: String(this.offset()),
+    });
+    this.api.get<{ segments: Segment[]; total?: number; limit?: number; offset?: number }>(`/projects/${this.projectId()}/segments?${query.toString()}`).subscribe({
+      next: (res) => {
+        this.segments.set(res.segments ?? []);
+        this.total.set(res.total ?? 0);
+        this.limit.set(res.limit ?? this.limit());
+        this.offset.set(res.offset ?? this.offset());
+        this.loading.set(false);
+      },
       error: (err: unknown) => applyApiFailureToSignals(this.error, this.errorRef, err, 'Failed to load segments'),
     });
+  }
+
+  setQuery(q: string): void {
+    this.q.set(q);
+    this.offset.set(0);
+    this.reload();
+  }
+
+  prevPage(): void {
+    this.offset.set(Math.max(0, this.offset() - this.limit()));
+    this.reload();
+  }
+
+  nextPage(): void {
+    this.offset.set(this.offset() + this.limit());
+    this.reload();
   }
 
   create(): void {

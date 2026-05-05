@@ -3,7 +3,6 @@ package mysql
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"strings"
 	"time"
 
@@ -70,40 +69,73 @@ WHERE f.project_id = ? AND e.` + "`key`" + ` = ? AND f.id = ? AND fv.version = ?
 	return snap, nil
 }
 
-func (r *AdminReadRepository) ListAuditEntries(ctx context.Context, projectID, entityType, entityID string, limit int) ([]repository.AuditEntrySummary, error) {
+func (r *AdminReadRepository) ListAuditEntries(ctx context.Context, projectID, entityType, entityID string, limit, offset int) ([]repository.AuditEntrySummary, int, error) {
 	if limit <= 0 || limit > 500 {
 		limit = 100
 	}
+	if offset < 0 {
+		offset = 0
+	}
 	var sb strings.Builder
 	sb.WriteString(`
-SELECT id, entity_type, entity_id, action, correlation_id, created_at
-FROM audit_entries
-WHERE project_id = ?`)
+SELECT ae.id, ae.entity_type, ae.entity_id, f.` + "`key`" + ` AS entity_key, f.name AS entity_name, ae.action, ae.correlation_id, ae.created_at
+FROM audit_entries ae
+LEFT JOIN flags f ON f.id = ae.entity_id AND ae.entity_type = 'flag' AND f.project_id = ae.project_id
+WHERE ae.project_id = ?`)
 	args := []any{projectID}
 	if entityType != "" {
-		sb.WriteString(` AND entity_type = ?`)
+		sb.WriteString(` AND ae.entity_type = ?`)
 		args = append(args, entityType)
 	}
 	if entityID != "" {
-		sb.WriteString(` AND entity_id = ?`)
+		sb.WriteString(` AND ae.entity_id = ?`)
 		args = append(args, entityID)
 	}
-	sb.WriteString(` ORDER BY created_at DESC LIMIT `)
-	sb.WriteString(fmt.Sprintf("%d", limit))
+
+	var total int
+	countQ := `
+SELECT COUNT(1)
+FROM audit_entries ae
+WHERE ae.project_id = ?` + func() string {
+		var w strings.Builder
+		if entityType != "" {
+			w.WriteString(` AND ae.entity_type = ?`)
+		}
+		if entityID != "" {
+			w.WriteString(` AND ae.entity_id = ?`)
+		}
+		return w.String()
+	}()
+	if err := r.db.QueryRowContext(ctx, countQ, args...).Scan(&total); err != nil {
+		return nil, 0, apperror.NewInfrastructureError("DB", "audit count failed", err)
+	}
+
+	sb.WriteString(` ORDER BY ae.created_at DESC, ae.id DESC LIMIT ? OFFSET ?`)
+	args = append(args, limit, offset)
 
 	rows, err := r.db.QueryContext(ctx, sb.String(), args...)
 	if err != nil {
-		return nil, apperror.NewInfrastructureError("DB", "list audit failed", err)
+		return nil, 0, apperror.NewInfrastructureError("DB", "list audit failed", err)
 	}
 	defer rows.Close()
 
 	var out []repository.AuditEntrySummary
 	for rows.Next() {
 		var row repository.AuditEntrySummary
+		var entityKey sql.NullString
+		var entityName sql.NullString
 		var corr sql.NullString
 		var created time.Time
-		if err := rows.Scan(&row.ID, &row.EntityType, &row.EntityID, &row.Action, &corr, &created); err != nil {
-			return nil, apperror.NewInfrastructureError("DB", "scan audit failed", err)
+		if err := rows.Scan(&row.ID, &row.EntityType, &row.EntityID, &entityKey, &entityName, &row.Action, &corr, &created); err != nil {
+			return nil, 0, apperror.NewInfrastructureError("DB", "scan audit failed", err)
+		}
+		if entityKey.Valid {
+			s := entityKey.String
+			row.EntityKey = &s
+		}
+		if entityName.Valid {
+			s := entityName.String
+			row.EntityName = &s
 		}
 		if corr.Valid {
 			s := corr.String
@@ -112,5 +144,8 @@ WHERE project_id = ?`)
 		row.CreatedAt = created.UTC().Format(time.RFC3339Nano)
 		out = append(out, row)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, 0, apperror.NewInfrastructureError("DB", "audit rows failed", err)
+	}
+	return out, total, nil
 }

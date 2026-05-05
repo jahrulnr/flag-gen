@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 
 	"flag-gen/application/usecase"
 	"flag-gen/delivery/http/response"
@@ -33,12 +34,21 @@ type createEnvironmentRequest struct {
 
 func (h *EnvironmentsHandler) List(c *gin.Context) {
 	projectID := c.Param("projectId")
-	out, err := h.list.Execute(c.Request.Context(), projectID)
+	q := c.Query("q")
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	out, total, err := h.list.Execute(c.Request.Context(), projectID, q, limit, offset)
 	if err != nil {
 		response.AbortErr(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"environments": out, "correlationId": response.CorrelationID(c)})
+	c.JSON(http.StatusOK, gin.H{
+		"environments":   out,
+		"total":          total,
+		"limit":          limit,
+		"offset":         offset,
+		"correlationId":  response.CorrelationID(c),
+	})
 }
 
 func (h *EnvironmentsHandler) Create(c *gin.Context) {

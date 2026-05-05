@@ -92,19 +92,42 @@ LIMIT 1`
 	return &f, nil
 }
 
-func (r *FlagRepository) ListByScope(ctx context.Context, scope valueobject.Scope) ([]entity.Flag, error) {
-	const q = `
+func (r *FlagRepository) ListByScope(ctx context.Context, scope valueobject.Scope, q string, limit, offset int) ([]entity.Flag, int, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	q = strings.TrimSpace(q)
+	const base = `
 SELECT f.id, f.` + "`key`" + `, f.name, f.description, f.enabled, f.client_side,
        f.value_type, f.default_value_json, f.rollout_percentage, f.rollout_stickiness,
        f.version, f.created_at, f.updated_at, f.deleted_at
 FROM flags f
 JOIN environments e ON e.id = f.environment_id
 WHERE f.project_id = ? AND e.` + "`key`" + ` = ? AND f.deleted_at IS NULL
-ORDER BY f.created_at ASC`
+`
+	args := []any{scope.ProjectID, scope.EnvironmentKey}
+	where := ""
+	if q != "" {
+		where = " AND (f." + "`key`" + " LIKE ? OR f.name LIKE ?)"
+		like := "%" + q + "%"
+		args = append(args, like, like)
+	}
 
-	rows, err := r.db.QueryContext(ctx, q, scope.ProjectID, scope.EnvironmentKey)
+	var total int
+	countQ := "SELECT COUNT(1) FROM flags f JOIN environments e ON e.id = f.environment_id WHERE f.project_id = ? AND e." + "`key`" + " = ? AND f.deleted_at IS NULL" + where
+	if err := r.db.QueryRowContext(ctx, countQ, args...).Scan(&total); err != nil {
+		return nil, 0, apperror.NewInfrastructureError("DB", "flags count failed", err)
+	}
+
+	listQ := base + where + " ORDER BY f." + "`key`" + " ASC, f.name ASC LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+
+	rows, err := r.db.QueryContext(ctx, listQ, args...)
 	if err != nil {
-		return nil, apperror.NewInfrastructureError("DB", "flags list failed", err)
+		return nil, 0, apperror.NewInfrastructureError("DB", "flags list failed", err)
 	}
 	defer rows.Close()
 
@@ -135,7 +158,7 @@ ORDER BY f.created_at ASC`
 			&f.UpdatedAt,
 			&deleted,
 		); err != nil {
-			return nil, apperror.NewInfrastructureError("DB", "flags scan failed", err)
+			return nil, 0, apperror.NewInfrastructureError("DB", "flags scan failed", err)
 		}
 		if desc.Valid {
 			f.Description = desc.String
@@ -155,17 +178,17 @@ ORDER BY f.created_at ASC`
 		out = append(out, f)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, apperror.NewInfrastructureError("DB", "flags rows failed", err)
+		return nil, 0, apperror.NewInfrastructureError("DB", "flags rows failed", err)
 	}
 
 	rulesByFlag, err := r.listRulesForFlagIDs(ctx, flagIDs)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	for i := range out {
 		out[i].Rules = rulesByFlag[out[i].ID]
 	}
-	return out, nil
+	return out, total, nil
 }
 
 func (r *FlagRepository) FindByID(ctx context.Context, scope valueobject.Scope, flagID string) (*entity.Flag, error) {

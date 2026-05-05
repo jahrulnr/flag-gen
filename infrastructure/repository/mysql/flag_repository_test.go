@@ -25,6 +25,6 @@ func TestFlagRepository_ReturnsInfraErrorUntilImplemented(t *testing.T) {
 	require.ErrorAs(t, err, &appErr)
 	require.Equal(t, apperror.StatusBadGateway, appErr.StatusCode())
 
-	_, err = repo.ListByScope(context.Background(), scope)
+	_, _, err = repo.ListByScope(context.Background(), scope, "", 50, 0)
 	require.Error(t, err)
 }

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 
 	"flag-gen/application/usecase"
 	"flag-gen/delivery/http/response"
@@ -32,12 +33,21 @@ type createProjectRequest struct {
 }
 
 func (h *ProjectsHandler) List(c *gin.Context) {
-	out, err := h.list.Execute(c.Request.Context())
+	q := c.Query("q")
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	out, total, err := h.list.Execute(c.Request.Context(), q, limit, offset)
 	if err != nil {
 		response.AbortErr(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"projects": out, "correlationId": response.CorrelationID(c)})
+	c.JSON(http.StatusOK, gin.H{
+		"projects":       out,
+		"total":          total,
+		"limit":          limit,
+		"offset":         offset,
+		"correlationId":  response.CorrelationID(c),
+	})
 }
 
 func (h *ProjectsHandler) Create(c *gin.Context) {

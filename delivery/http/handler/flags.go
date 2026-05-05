@@ -92,12 +92,21 @@ type updateFlagRequest struct {
 
 func (h *FlagsHandler) List(c *gin.Context) {
 	scope := valueobject.Scope{ProjectID: c.Param("projectId"), EnvironmentKey: c.Param("environmentKey")}
-	out, err := h.list.Execute(c.Request.Context(), scope)
+	q := c.Query("q")
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	out, total, err := h.list.Execute(c.Request.Context(), scope, q, limit, offset)
 	if err != nil {
 		response.AbortErr(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"flags": out, "correlationId": response.CorrelationID(c)})
+	c.JSON(http.StatusOK, gin.H{
+		"flags":         out,
+		"total":         total,
+		"limit":         limit,
+		"offset":        offset,
+		"correlationId": response.CorrelationID(c),
+	})
 }
 
 func (h *FlagsHandler) GetByKey(c *gin.Context) {

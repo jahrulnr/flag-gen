@@ -15,11 +15,24 @@
 
   <app-inline-api-error [message]="error()" [reference]="errorRef()" />
 
+  <app-list-toolbar
+    [q]="q()"
+    (qChange)="setQuery($event)"
+    [total]="total()"
+    [limit]="limit()"
+    [offset]="offset()"
+    [loading]="loading()"
+    placeholder="Search flags by key or name…"
+    (prev)="prevPage()"
+    (next)="nextPage()"
+    (refresh)="reload()"
+  />
+
   <div *ngIf="form.id" class="flag-edit-banner" role="status">
     Editing flag <strong>{{ form.key }}</strong>. Submit saves changes to this flag; leave the Key field unchanged unless you intend to migrate keys server-side.
   </div>
 
-  <form (ngSubmit)="form.id ? update() : create()" class="form wide">
+  <form (ngSubmit)="form.id ? update() : create()" class="form wide flag-form">
     <label class="field">
       Key
       <input name="key" placeholder="e.g. checkout_v2" [(ngModel)]="form.key" required />
@@ -29,47 +42,98 @@
       <input name="name" placeholder="e.g. Checkout V2" [(ngModel)]="form.name" required />
     </label>
     <label class="field field--full">
-      Description <span class="optional">(optional)</span>
+      <span class="field__label">Description <span class="optional">(optional)</span></span>
       <input name="description" placeholder="What this flag controls" [(ngModel)]="form.description" />
     </label>
-    <label class="field field--check">
-      <input name="enabled" type="checkbox" [(ngModel)]="form.enabled" />
-      <span>Enabled</span>
-    </label>
-    <label class="field field--check">
-      <input name="clientSide" type="checkbox" [(ngModel)]="form.clientSide" />
-      <span>Client-side</span>
-    </label>
-    <label class="field">
-      Value type
-      <select name="valueType" [(ngModel)]="form.valueType" (ngModelChange)="onValueTypeChange()">
-        <option value="boolean">Boolean</option>
-        <option value="json">JSON</option>
-      </select>
-    </label>
-    <label class="field" *ngIf="form.valueType === 'boolean'">
-      Default value
-      <select name="defaultBool" [(ngModel)]="form.defaultValue">
-        <option value="false">False</option>
-        <option value="true">True</option>
-      </select>
-    </label>
-    <label class="field" *ngIf="form.valueType !== 'boolean'">
-      Default value
-      <input name="defaultValue" placeholder="JSON literal" [(ngModel)]="form.defaultValue" />
-    </label>
-    <label class="field">
-      Rollout %
-      <input name="rolloutPercentage" type="number" placeholder="e.g. 50" [(ngModel)]="form.rolloutPercentage" />
-    </label>
-    <label class="field">
-      Rollout stickiness
-      <input name="rolloutStickiness" placeholder="e.g. userId" [(ngModel)]="form.rolloutStickiness" />
-    </label>
+
+    <div class="flag-form__section flag-form__section--settings">
+      <label class="toggle-field">
+        <input name="enabled" type="checkbox" [(ngModel)]="form.enabled" />
+        <span class="toggle-field__control" aria-hidden="true"></span>
+        <span>
+          <strong>Enabled</strong>
+          <small>Serve this flag in the environment</small>
+        </span>
+      </label>
+      <label class="toggle-field">
+        <input name="clientSide" type="checkbox" [(ngModel)]="form.clientSide" />
+        <span class="toggle-field__control" aria-hidden="true"></span>
+        <span>
+          <strong>Client-side</strong>
+          <small>Expose only when safe for browser or mobile SDKs</small>
+        </span>
+      </label>
+      <label class="toggle-field toggle-field--value" *ngIf="form.valueType === 'boolean'">
+        <input
+          name="defaultBool"
+          type="checkbox"
+          [ngModel]="form.defaultValue === 'true'"
+          (ngModelChange)="form.defaultValue = $event ? 'true' : 'false'"
+        />
+        <span>
+          <strong>Default value</strong>
+          <small>{{ form.defaultValue === 'true' ? 'True' : 'False' }} when no targeting rule matches</small>
+        </span>
+      </label>
+      <label class="field" *ngIf="form.valueType !== 'boolean'">
+        Default value
+        <input name="defaultValue" placeholder='e.g. {"variant":"control"}' [(ngModel)]="form.defaultValue" />
+      </label>
+    </div>
+
+    <div class="flag-form__section flag-form__section--values">
+      <div class="field">
+        <span class="field__label" id="value-type-label">Value type</span>
+        <div class="custom-select" (keydown.escape)="closeValueTypeMenu()">
+          <button
+            type="button"
+            class="custom-select__trigger"
+            aria-haspopup="listbox"
+            [attr.aria-expanded]="valueTypeMenuOpen()"
+            aria-labelledby="value-type-label value-type-current"
+            (click)="toggleValueTypeMenu()"
+          >
+            <span id="value-type-current">{{ valueTypeLabel() }}</span>
+            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+          </button>
+          <div class="custom-select__menu" *ngIf="valueTypeMenuOpen()" role="listbox" aria-labelledby="value-type-label">
+            <button
+              type="button"
+              class="custom-select__option"
+              role="option"
+              [class.is-selected]="form.valueType === 'boolean'"
+              [attr.aria-selected]="form.valueType === 'boolean'"
+              (click)="chooseValueType('boolean')"
+            >
+              Boolean
+            </button>
+            <button
+              type="button"
+              class="custom-select__option"
+              role="option"
+              [class.is-selected]="form.valueType === 'json'"
+              [attr.aria-selected]="form.valueType === 'json'"
+              (click)="chooseValueType('json')"
+            >
+              JSON
+            </button>
+          </div>
+        </div>
+      </div>
+      <label class="field">
+        Rollout %
+        <input name="rolloutPercentage" type="number" placeholder="e.g. 50" [(ngModel)]="form.rolloutPercentage" />
+      </label>
+      <label class="field">
+        Rollout stickiness
+        <input name="rolloutStickiness" placeholder="e.g. userId" [(ngModel)]="form.rolloutStickiness" />
+      </label>
+    </div>
+
     <label class="field field--full">
-      Rules JSON
-      <small class="hint">Must be valid JSON array. Invalid JSON will be rejected by the API.</small>
-      <textarea name="rulesJson" [(ngModel)]="form.rulesJson" rows="4" placeholder='e.g. []'></textarea>
+      <span class="field__label">Targeting rules <span class="optional">(JSON)</span></span>
+      <small class="hint">Optional ordered match rules. Use <code>[]</code> when everyone should get the default value and rollout behavior.</small>
+      <textarea name="rulesJson" [(ngModel)]="form.rulesJson" rows="4" placeholder='[{"attribute":"country","operator":"equals","value":"ID","serve":true}]'></textarea>
     </label>
     <button type="submit" class="btn btn--primary">
       <i class="fa-solid" [class.fa-pen]="form.id" [class.fa-plus]="!form.id" aria-hidden="true"></i>

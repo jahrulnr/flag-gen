@@ -48,17 +48,18 @@ func (mr *MockFlagRepositoryMockRecorder) FindByKey(ctx, scope, flagKey any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByKey", reflect.TypeOf((*MockFlagRepository)(nil).FindByKey), ctx, scope, flagKey)
 }
 
-func (m *MockFlagRepository) ListByScope(ctx context.Context, scope valueobject.Scope) ([]entity.Flag, error) {
+func (m *MockFlagRepository) ListByScope(ctx context.Context, scope valueobject.Scope, q string, limit, offset int) ([]entity.Flag, int, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByScope", ctx, scope)
+	ret := m.ctrl.Call(m, "ListByScope", ctx, scope, q, limit, offset)
 	ret0, _ := ret[0].([]entity.Flag)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(int)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
-func (mr *MockFlagRepositoryMockRecorder) ListByScope(ctx, scope any) *gomock.Call {
+func (mr *MockFlagRepositoryMockRecorder) ListByScope(ctx, scope, q, limit, offset any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByScope", reflect.TypeOf((*MockFlagRepository)(nil).ListByScope), ctx, scope)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByScope", reflect.TypeOf((*MockFlagRepository)(nil).ListByScope), ctx, scope, q, limit, offset)
 }
 
 func (m *MockFlagRepository) FindByID(ctx context.Context, scope valueobject.Scope, flagID string) (*entity.Flag, error) {

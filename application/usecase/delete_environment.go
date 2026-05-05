@@ -28,7 +28,7 @@ func (u *DeleteEnvironmentUsecase) Execute(ctx context.Context, projectID, envir
 		return err
 	}
 	scope := valueobject.Scope{ProjectID: projectID, EnvironmentKey: environmentKey}
-	fl, err := u.flags.ListByScope(ctx, scope)
+	fl, _, err := u.flags.ListByScope(ctx, scope, "", 1, 0)
 	if err != nil {
 		return err
 	}

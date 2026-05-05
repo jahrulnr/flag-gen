@@ -3,11 +3,15 @@ package mysql
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"strings"
 	"time"
 
 	"flag-gen/domain/entity"
 	"flag-gen/domain/repository"
 	apperror "flag-gen/pkg/error"
+
+	mysqlerr "github.com/go-sql-driver/mysql"
 )
 
 type ProjectRepository struct {
@@ -20,16 +24,40 @@ func NewProjectRepository(db *DB) *ProjectRepository {
 
 var _ repository.ProjectRepository = (*ProjectRepository)(nil)
 
-func (r *ProjectRepository) List(ctx context.Context) ([]entity.Project, error) {
-	const q = `
+func (r *ProjectRepository) List(ctx context.Context, q string, limit, offset int) ([]entity.Project, int, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	q = strings.TrimSpace(q)
+	const base = `
 SELECT id, ` + "`key`" + `, name, description, created_by, created_at, updated_at, deleted_at
 FROM projects
 WHERE deleted_at IS NULL
-ORDER BY created_at ASC`
+`
 
-	rows, err := r.db.QueryContext(ctx, q)
+	where := ""
+	args := []any{}
+	if q != "" {
+		where = " AND (" + "`key`" + " LIKE ? OR name LIKE ?)"
+		like := "%" + q + "%"
+		args = append(args, like, like)
+	}
+
+	var total int
+	countQ := "SELECT COUNT(1) FROM projects WHERE deleted_at IS NULL" + where
+	if err := r.db.QueryRowContext(ctx, countQ, args...).Scan(&total); err != nil {
+		return nil, 0, apperror.NewInfrastructureError("DB", "projects count failed", err)
+	}
+
+	listQ := base + where + " ORDER BY " + "`key`" + " ASC, name ASC LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+
+	rows, err := r.db.QueryContext(ctx, listQ, args...)
 	if err != nil {
-		return nil, apperror.NewInfrastructureError("DB", "projects list failed", err)
+		return nil, 0, apperror.NewInfrastructureError("DB", "projects list failed", err)
 	}
 	defer rows.Close()
 
@@ -40,7 +68,7 @@ ORDER BY created_at ASC`
 		var createdBy sql.NullString
 		var deletedAt sql.NullTime
 		if err := rows.Scan(&p.ID, &p.Key, &p.Name, &desc, &createdBy, &p.CreatedAt, &p.UpdatedAt, &deletedAt); err != nil {
-			return nil, apperror.NewInfrastructureError("DB", "projects scan failed", err)
+			return nil, 0, apperror.NewInfrastructureError("DB", "projects scan failed", err)
 		}
 		if desc.Valid {
 			p.Description = &desc.String
@@ -55,9 +83,9 @@ ORDER BY created_at ASC`
 		out = append(out, p)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, apperror.NewInfrastructureError("DB", "projects rows failed", err)
+		return nil, 0, apperror.NewInfrastructureError("DB", "projects rows failed", err)
 	}
-	return out, nil
+	return out, total, nil
 }
 
 func (r *ProjectRepository) Create(ctx context.Context, p entity.Project) (entity.Project, error) {
@@ -83,9 +111,21 @@ VALUES (?, ?, ?, ?, ?, ?, ?, NULL)`
 	}
 
 	if _, err := r.db.ExecContext(ctx, q, p.ID, p.Key, p.Name, desc, createdBy, p.CreatedAt, p.UpdatedAt); err != nil {
+		if isMySQLDuplicateKey(err) {
+			return entity.Project{}, apperror.New(apperror.StatusConflict, "Project key already exists. Choose a different key.", err)
+		}
 		return entity.Project{}, apperror.NewInfrastructureError("DB", "project insert failed", err)
 	}
 	return p, nil
+}
+
+func isMySQLDuplicateKey(err error) bool {
+	var me *mysqlerr.MySQLError
+	if errors.As(err, &me) {
+		// 1062 = ER_DUP_ENTRY
+		return me.Number == 1062
+	}
+	return false
 }
 
 func (r *ProjectRepository) FindByID(ctx context.Context, id string) (*entity.Project, error) {

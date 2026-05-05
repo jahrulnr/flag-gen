@@ -19,6 +19,8 @@ type AuditEntrySummary struct {
 	ID            string
 	EntityType    string
 	EntityID      string
+	EntityKey     *string
+	EntityName    *string
 	Action        string
 	CorrelationID *string
 	CreatedAt     string
@@ -28,5 +30,5 @@ type AuditEntrySummary struct {
 type AdminReadRepository interface {
 	ListFlagVersions(ctx context.Context, scope valueobject.Scope, flagID string) ([]FlagVersionSummary, error)
 	GetFlagVersionSnapshot(ctx context.Context, scope valueobject.Scope, flagID string, version int) ([]byte, error)
-	ListAuditEntries(ctx context.Context, projectID, entityType, entityID string, limit int) ([]AuditEntrySummary, error)
+	ListAuditEntries(ctx context.Context, projectID, entityType, entityID string, limit, offset int) ([]AuditEntrySummary, int, error)
 }

@@ -16,9 +16,9 @@ func NewListSegmentsUsecase(segments repository.SegmentRepository) *ListSegments
 	return &ListSegmentsUsecase{segments: segments}
 }
 
-func (u *ListSegmentsUsecase) Execute(ctx context.Context, projectID string) ([]entity.Segment, error) {
+func (u *ListSegmentsUsecase) Execute(ctx context.Context, projectID, q string, limit, offset int) ([]entity.Segment, int, error) {
 	if projectID == "" {
-		return nil, apperror.NewValidationError(apperror.ValidationError, "missing projectId", nil)
+		return nil, 0, apperror.NewValidationError(apperror.ValidationError, "missing projectId", nil)
 	}
-	return u.segments.ListByProject(ctx, projectID)
+	return u.segments.ListByProject(ctx, projectID, q, limit, offset)
 }

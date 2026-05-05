@@ -149,6 +149,10 @@ export interface AuditEntry {
   correlationId?: string | null;
   CreatedAt?: string;
   createdAt?: string;
+  EntityKey?: string | null;
+  entityKey?: string | null;
+  EntityName?: string | null;
+  entityName?: string | null;
 }
 
 export interface FlagVersion {

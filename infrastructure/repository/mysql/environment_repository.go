@@ -3,6 +3,7 @@ package mysql
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 
 	"flag-gen/domain/entity"
@@ -20,16 +21,39 @@ func NewEnvironmentRepository(db *DB) *EnvironmentRepository {
 
 var _ repository.EnvironmentRepository = (*EnvironmentRepository)(nil)
 
-func (r *EnvironmentRepository) ListByProject(ctx context.Context, projectID string) ([]entity.Environment, error) {
-	const q = `
+func (r *EnvironmentRepository) ListByProject(ctx context.Context, projectID, q string, limit, offset int) ([]entity.Environment, int, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	q = strings.TrimSpace(q)
+	const base = `
 SELECT id, project_id, ` + "`key`" + `, name, sort_order, version, created_at, updated_at, deleted_at
 FROM environments
 WHERE project_id = ? AND deleted_at IS NULL
-ORDER BY sort_order ASC, created_at ASC`
+`
+	args := []any{projectID}
+	where := ""
+	if q != "" {
+		where = " AND (" + "`key`" + " LIKE ? OR name LIKE ?)"
+		like := "%" + q + "%"
+		args = append(args, like, like)
+	}
 
-	rows, err := r.db.QueryContext(ctx, q, projectID)
+	var total int
+	countQ := "SELECT COUNT(1) FROM environments WHERE project_id = ? AND deleted_at IS NULL" + where
+	if err := r.db.QueryRowContext(ctx, countQ, args...).Scan(&total); err != nil {
+		return nil, 0, apperror.NewInfrastructureError("DB", "environments count failed", err)
+	}
+
+	listQ := base + where + " ORDER BY " + "`key`" + " ASC, name ASC LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+
+	rows, err := r.db.QueryContext(ctx, listQ, args...)
 	if err != nil {
-		return nil, apperror.NewInfrastructureError("DB", "environments list failed", err)
+		return nil, 0, apperror.NewInfrastructureError("DB", "environments list failed", err)
 	}
 	defer rows.Close()
 
@@ -38,7 +62,7 @@ ORDER BY sort_order ASC, created_at ASC`
 		var e entity.Environment
 		var deletedAt sql.NullTime
 		if err := rows.Scan(&e.ID, &e.ProjectID, &e.Key, &e.Name, &e.SortOrder, &e.Version, &e.CreatedAt, &e.UpdatedAt, &deletedAt); err != nil {
-			return nil, apperror.NewInfrastructureError("DB", "environments scan failed", err)
+			return nil, 0, apperror.NewInfrastructureError("DB", "environments scan failed", err)
 		}
 		if deletedAt.Valid {
 			t := deletedAt.Time
@@ -47,9 +71,9 @@ ORDER BY sort_order ASC, created_at ASC`
 		out = append(out, e)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, apperror.NewInfrastructureError("DB", "environments rows failed", err)
+		return nil, 0, apperror.NewInfrastructureError("DB", "environments rows failed", err)
 	}
-	return out, nil
+	return out, total, nil
 }
 
 func (r *EnvironmentRepository) Create(ctx context.Context, env entity.Environment) (entity.Environment, error) {

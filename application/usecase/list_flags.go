@@ -17,9 +17,9 @@ func NewListFlagsUsecase(flags repository.FlagRepository) *ListFlagsUsecase {
 	return &ListFlagsUsecase{flags: flags}
 }
 
-func (u *ListFlagsUsecase) Execute(ctx context.Context, scope valueobject.Scope) ([]entity.Flag, error) {
+func (u *ListFlagsUsecase) Execute(ctx context.Context, scope valueobject.Scope, q string, limit, offset int) ([]entity.Flag, int, error) {
 	if scope.ProjectID == "" || scope.EnvironmentKey == "" {
-		return nil, apperror.NewValidationError(apperror.ValidationError, "missing scope", nil)
+		return nil, 0, apperror.NewValidationError(apperror.ValidationError, "missing scope", nil)
 	}
-	return u.flags.ListByScope(ctx, scope)
+	return u.flags.ListByScope(ctx, scope, q, limit, offset)
 }

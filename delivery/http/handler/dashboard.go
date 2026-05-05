@@ -97,10 +97,17 @@ func (h *DashboardHandler) ListAudit(c *gin.Context) {
 	entityType := c.Query("entityType")
 	entityID := c.Query("entityId")
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
-	rows, err := h.admin.ListAuditEntries(c.Request.Context(), projectID, entityType, entityID, limit)
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	rows, total, err := h.admin.ListAuditEntries(c.Request.Context(), projectID, entityType, entityID, limit, offset)
 	if err != nil {
 		response.AbortErr(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"audit": rows, "correlationId": response.CorrelationID(c)})
+	c.JSON(http.StatusOK, gin.H{
+		"audit":         rows,
+		"total":         total,
+		"limit":         limit,
+		"offset":        offset,
+		"correlationId": response.CorrelationID(c),
+	})
 }

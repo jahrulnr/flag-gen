@@ -11,6 +11,19 @@
 
   <app-inline-api-error [message]="error()" [reference]="errorRef()" />
 
+  <app-list-toolbar
+    [q]="filter.entityId"
+    (qChange)="setQuery($event)"
+    [total]="total()"
+    [limit]="limit()"
+    [offset]="offset()"
+    [loading]="loading()"
+    placeholder="Filter by entity id (UUID) or key…"
+    (prev)="prevPage()"
+    (next)="nextPage()"
+    (refresh)="search()"
+  />
+
   <form (ngSubmit)="search()" class="form audit-form">
     <label class="field">
       Project ID
@@ -56,7 +69,8 @@
 
   <div *ngIf="!searched()" class="audit-placeholder">
     <strong>No search yet</strong>
-    Enter a project UUID and tap Search to load audit rows.
+    <span *ngIf="!filter.projectId">Enter a project UUID and tap Search to load audit rows.</span>
+    <span *ngIf="filter.projectId">Tap Search to load audit rows for the selected project.</span>
   </div>
 
   <div *ngIf="searched() && rows().length === 0 && !error()" class="audit-placeholder">
@@ -76,9 +90,22 @@
       </thead>
       <tbody>
         <tr *ngFor="let row of rows()">
-          <td>{{ row.entityType ?? row.EntityType }} / {{ row.entityId ?? row.EntityID }}</td>
+          <td>
+            <strong>{{ entityPrimary(row) }}</strong>
+            <div class="audit-secondary">{{ entitySecondary(row) }}</div>
+          </td>
           <td>{{ row.action ?? row.Action }}</td>
-          <td>{{ row.correlationId ?? row.CorrelationID }}</td>
+          <td>
+            <code class="audit-mono">{{ correlationShort(row) }}</code>
+            <button
+              type="button"
+              class="btn btn--ghost audit-copy"
+              (click)="copy(row.correlationId ?? row.CorrelationID)"
+              [disabled]="!(row.correlationId ?? row.CorrelationID)"
+            >
+              Copy
+            </button>
+          </td>
           <td>{{ formatTimestamp(row.createdAt ?? row.CreatedAt) }}</td>
         </tr>
       </tbody>

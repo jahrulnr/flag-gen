@@ -1,1 +1,57 @@
-@use '../flags/flags-page.scss';
+@use '../projects/projects-page.scss';
+
+.wide {
+  align-items: stretch;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
+}
+
+.field--full {
+  grid-column: 1 / -1;
+}
+
+.flag-edit-banner {
+  background: rgb(52 211 153 / 12%);
+  border: 1px solid rgb(52 211 153 / 26%);
+  border-radius: var(--radius-md);
+  color: var(--fg-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  padding: 0.75rem 1rem;
+}
+
+.flag-edit-banner strong {
+  color: var(--fg-primary);
+}
+
+.field .hint {
+  color: var(--fg-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+textarea {
+  background: rgb(15 23 42 / 86%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--fg-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  padding: 0.65rem;
+}
+
+textarea:focus {
+  border-color: rgb(52 211 153 / 52%);
+  box-shadow: var(--focus-ring);
+  outline: 0;
+}
+
+textarea::placeholder {
+  color: rgb(148 163 184 / 72%);
+}
+
+@media (max-width: 700px) {
+  .wide {
+    grid-template-columns: 1fr;
+  }
+}

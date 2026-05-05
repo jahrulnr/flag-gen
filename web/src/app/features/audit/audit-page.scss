@@ -55,6 +55,22 @@
     vertical-align: top;
   }
 
+  .audit-secondary {
+    color: var(--fg-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-top: 0.25rem;
+  }
+
+  .audit-mono {
+    font-size: 0.85rem;
+  }
+
+  .audit-copy {
+    margin-left: 0.5rem;
+    padding: 0.35rem 0.55rem;
+  }
+
   .audit-placeholder {
     background: rgb(148 163 184 / 6%);
     border: 1px dashed var(--border-subtle);

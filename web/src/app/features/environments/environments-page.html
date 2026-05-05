@@ -15,6 +15,19 @@
 
   <app-inline-api-error [message]="error()" [reference]="errorRef()" />
 
+  <app-list-toolbar
+    [q]="q()"
+    (qChange)="setQuery($event)"
+    [total]="total()"
+    [limit]="limit()"
+    [offset]="offset()"
+    [loading]="loading()"
+    placeholder="Search environments by key or name…"
+    (prev)="prevPage()"
+    (next)="nextPage()"
+    (refresh)="reload()"
+  />
+
   <form (ngSubmit)="create()" class="form">
     <label class="field">
       Key

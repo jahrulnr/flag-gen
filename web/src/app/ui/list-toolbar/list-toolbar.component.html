@@ -1,0 +1,58 @@
+<div class="list-toolbar" role="region" aria-label="List controls">
+  <div class="list-toolbar__left">
+    <label class="list-toolbar__search" *ngIf="showSearch()">
+      <span class="list-toolbar__sr-only">Search</span>
+      <input
+        type="search"
+        [value]="q()"
+        (input)="onInput($event)"
+        [placeholder]="placeholder()"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+      />
+    </label>
+    <button
+      type="button"
+      class="btn list-toolbar__icon-button"
+      (click)="refresh.emit()"
+      [disabled]="loading()"
+      aria-label="Refresh list"
+      title="Refresh list"
+    >
+      <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+    </button>
+  </div>
+
+  <div class="list-toolbar__right" aria-live="polite">
+    <span class="list-toolbar__range" *ngIf="total() > 0; else emptyRange">
+      Showing {{ from() }}–{{ to() }} of {{ total() }}
+    </span>
+    <ng-template #emptyRange>
+      <span class="list-toolbar__range">Showing 0 of 0</span>
+    </ng-template>
+    <div class="list-toolbar__pager">
+      <button
+        type="button"
+        class="btn list-toolbar__pager-button"
+        (click)="prev.emit()"
+        [disabled]="!canPrev() || loading()"
+        aria-label="Previous page"
+        title="Previous page"
+      >
+        <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+      </button>
+      <button
+        type="button"
+        class="btn list-toolbar__pager-button"
+        (click)="next.emit()"
+        [disabled]="!canNext() || loading()"
+        aria-label="Next page"
+        title="Next page"
+      >
+        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+      </button>
+    </div>
+  </div>
+</div>

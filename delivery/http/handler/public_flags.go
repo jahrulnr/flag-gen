@@ -24,7 +24,7 @@ func (h *PublicFlagsHandler) List(c *gin.Context) {
 		ProjectID:      c.Param("projectId"),
 		EnvironmentKey: c.Param("environmentKey"),
 	}
-	flags, err := h.list.Execute(c.Request.Context(), scope)
+	flags, _, err := h.list.Execute(c.Request.Context(), scope, "", 500, 0)
 	if err != nil {
 		response.AbortErr(c, err)
 		return

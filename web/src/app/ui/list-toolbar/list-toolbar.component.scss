@@ -1,0 +1,133 @@
+.list-toolbar {
+  align-items: center;
+  background: rgb(15 23 42 / 58%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  justify-content: space-between;
+  padding: 0.85rem 0.95rem;
+}
+
+.list-toolbar__left {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  min-width: min(24rem, 100%);
+}
+
+.list-toolbar__right {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.list-toolbar__search input {
+  background: rgb(15 23 42 / 86%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--fg-primary);
+  min-height: 2.45rem;
+  min-width: min(20rem, 100%);
+  padding: 0.62rem 0.75rem;
+}
+
+.list-toolbar__search input::placeholder {
+  color: rgb(148 163 184 / 72%);
+}
+
+.list-toolbar__search input:focus {
+  border-color: rgb(52 211 153 / 52%);
+  box-shadow: var(--focus-ring);
+  outline: 0;
+}
+
+.list-toolbar__range {
+  color: var(--fg-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.list-toolbar__pager {
+  background: rgb(2 6 23 / 26%);
+  border: 1px solid rgb(148 163 184 / 12%);
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  overflow: hidden;
+}
+
+.list-toolbar__icon-button,
+.list-toolbar__pager-button {
+  aspect-ratio: 1;
+  background: rgb(148 163 184 / 7%);
+  border-color: rgb(148 163 184 / 16%);
+  color: var(--fg-secondary);
+  min-height: 2.45rem;
+  padding: 0;
+  width: 2.45rem;
+}
+
+.list-toolbar__icon-button:hover:not(:disabled),
+.list-toolbar__pager-button:hover:not(:disabled) {
+  background: rgb(52 211 153 / 11%);
+  border-color: rgb(52 211 153 / 28%);
+  color: var(--fg-primary);
+}
+
+.list-toolbar__pager-button {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  min-height: 2rem;
+  width: 2.15rem;
+}
+
+.list-toolbar__pager-button + .list-toolbar__pager-button {
+  border-left: 1px solid rgb(148 163 184 / 12%);
+}
+
+.list-toolbar__icon-button:disabled,
+.list-toolbar__pager-button:disabled {
+  color: rgb(148 163 184 / 34%);
+  cursor: not-allowed;
+  opacity: 1;
+  transform: none;
+}
+
+.list-toolbar__sr-only {
+  clip: rect(0, 0, 0, 0);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  width: 1px;
+}
+
+@media (max-width: 700px) {
+  .list-toolbar,
+  .list-toolbar__left,
+  .list-toolbar__right {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .list-toolbar__search {
+    flex: 1 1 auto;
+  }
+
+  .list-toolbar__search input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .list-toolbar__right {
+    justify-content: space-between;
+  }
+}

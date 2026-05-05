@@ -92,7 +92,7 @@ func seedDemoFlags(ctx context.Context, r *mysqlrepo.FlagRepository, scope value
 }
 
 func seedDemoSegments(ctx context.Context, r *mysqlrepo.SegmentRepository, scope valueobject.Scope) (int, error) {
-	list, err := r.ListByProject(ctx, scope.ProjectID)
+	list, _, err := r.ListByProject(ctx, scope.ProjectID, "", 500, 0)
 	if err != nil {
 		return 0, err
 	}

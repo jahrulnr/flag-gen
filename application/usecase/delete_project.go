@@ -25,14 +25,14 @@ func (u *DeleteProjectUsecase) Execute(ctx context.Context, projectID string) er
 	if projectID == "" {
 		return apperror.NewValidationError(apperror.ValidationError, "missing project id", nil)
 	}
-	envs, err := u.environments.ListByProject(ctx, projectID)
+	envs, _, err := u.environments.ListByProject(ctx, projectID, "", 1, 0)
 	if err != nil {
 		return err
 	}
 	if len(envs) > 0 {
 		return apperror.New(apperror.StatusConflict, "cannot delete project while environments exist", nil)
 	}
-	segs, err := u.segments.ListByProject(ctx, projectID)
+	segs, _, err := u.segments.ListByProject(ctx, projectID, "", 1, 0)
 	if err != nil {
 		return err
 	}
