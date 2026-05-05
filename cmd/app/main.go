@@ -92,7 +92,7 @@ func main() {
 	csrf := middleware.NewCSRFProtection(app.Config.Security.CSRFSecret, app.Config.Security.CSRFSessionKey)
 	deliveryhttp.RegisterV1Routes(router, app)
 	deliveryhttp.RegisterAPIRoutes(router, app, csrf)
-	if err := deliveryhttp.RegisterDashboardSSRProxy(router, app.Config); err != nil {
+	if err := deliveryhttp.RegisterDashboardSSRProxy(router, app.Config, csrf); err != nil {
 		log.Fatalf("failed to register dashboard SSR proxy: %v", err)
 	}
 

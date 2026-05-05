@@ -26,9 +26,34 @@
       <section *ngFor="let section of wiki.activeContent().sections" class="wiki-section">
         <h3>{{ section.title }}</h3>
         <ul>
-          <li *ngFor="let bullet of section.bullets">{{ bullet }}</li>
+          <li *ngFor="let bullet of section.bullets">
+            <ng-container *ngIf="parsePopupBullet(bullet) as parsed">
+              <span>{{ parsed.text }}</span>
+              <button
+                *ngIf="parsed.popupLabel && parsed.popupBody"
+                type="button"
+                class="wiki-inline-button"
+                (click)="openPopup(section.title, parsed.popupBody)"
+              >
+                {{ parsed.popupLabel }}
+              </button>
+            </ng-container>
+          </li>
         </ul>
       </section>
     </div>
   </aside>
+
+  <div *ngIf="popupOpen()" class="wiki-popup" role="dialog" aria-modal="true" aria-label="Wiki example">
+    <div class="wiki-popup__backdrop" aria-hidden="true" (click)="closePopup()"></div>
+    <div class="wiki-popup__panel">
+      <header class="wiki-popup__header">
+        <h3>{{ popupTitle() }}</h3>
+        <button type="button" class="wiki-drawer__close" aria-label="Close example" (click)="closePopup()">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </header>
+      <pre class="wiki-code"><code>{{ popupBody() }}</code></pre>
+    </div>
+  </div>
 </div>

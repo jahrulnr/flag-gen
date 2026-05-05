@@ -71,10 +71,58 @@ function renderAngular(
 ): void {
   angularApp
     .handle(req)
-    .then((response) =>
-      response ? writeResponseToNodeResponse(response, res) : next(),
-    )
+    .then(async (response) => {
+      if (!response) {
+        next();
+        return;
+      }
+      const withBootstrap = await injectBootstrap(req, res, response);
+      writeResponseToNodeResponse(withBootstrap, res);
+    })
     .catch(next);
+}
+
+async function injectBootstrap(
+  req: express.Request,
+  res: express.Response,
+  response: Response,
+): Promise<Response> {
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('text/html')) {
+    return response;
+  }
+  const html = await response.text();
+  if (html.includes('id="flag-gen-bootstrap"')) {
+    return new Response(html, responseInit(response));
+  }
+  try {
+    const csrfRes = await fetch(`${apiOrigin}/api/security/csrf`, {
+      headers: {
+        cookie: req.headers.cookie ?? '',
+        'x-forwarded-proto': req.protocol,
+      },
+    });
+    if (!csrfRes.ok) {
+      return new Response(html, responseInit(response));
+    }
+    const setCookie = csrfRes.headers.get('set-cookie');
+    if (setCookie) {
+      res.setHeader('set-cookie', setCookie);
+    }
+    const bootstrap = await csrfRes.json();
+    const script = `<script id="flag-gen-bootstrap" type="application/json">${JSON.stringify(bootstrap).replaceAll('</', '<\\/')}</script>`;
+    return new Response(html.replace('</head>', `${script}</head>`), responseInit(response));
+  } catch {
+    return new Response(html, responseInit(response));
+  }
+}
+
+function responseInit(response: Response): ResponseInit {
+  return {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  };
 }
 
 /**

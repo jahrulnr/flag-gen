@@ -3,7 +3,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { ApiService } from '../../core/api.service';
-import { AuditEntry } from '../../core/models';
+import { AuditEntry, Project, rowID, rowKey, rowName } from '../../core/models';
 import { applyApiFailureToSignals } from '../../core/user-facing-api-error';
 import { WorkspaceContextService } from '../../core/workspace-context.service';
 import { InlineApiErrorComponent } from '../../ui/inline-api-error/inline-api-error.component';
@@ -20,6 +20,7 @@ import { formatDisplayTimestamp } from './format-display-timestamp';
 export class AuditPage implements OnInit {
   private readonly api = inject(ApiService);
   private readonly workspace = inject(WorkspaceContextService);
+  private projectSearchDebounce: ReturnType<typeof setTimeout> | null = null;
   readonly rows = signal<AuditEntry[]>([]);
   readonly error = signal<string | null>(null);
   readonly errorRef = signal<string | null>(null);
@@ -28,10 +29,16 @@ export class AuditPage implements OnInit {
   readonly limit = signal(50);
   readonly offset = signal(0);
   readonly loading = signal(false);
+  readonly projectPickerOpen = signal(false);
+  readonly projectPickerQuery = signal('');
+  readonly projectOptions = signal<Project[]>([]);
+  readonly projectSearchLoading = signal(false);
+  readonly selectedProject = signal<Project | null>(null);
 
   filter = { projectId: '', entityType: 'flag', entityId: '' };
 
   ngOnInit(): void {
+    this.loadProjectOptions('');
     if (!this.filter.projectId) {
       const pid = this.workspace.lastWorkspaceProjectId();
       if (pid) {
@@ -39,6 +46,101 @@ export class AuditPage implements OnInit {
         this.search();
       }
     }
+  }
+
+  projectTriggerLabel(): string {
+    if (!this.filter.projectId) {
+      return 'Choose project';
+    }
+    const selected = this.selectedProject();
+    return selected ? rowName(selected) : shortProjectId(this.filter.projectId);
+  }
+
+  projectTriggerMeta(): string {
+    if (!this.filter.projectId) {
+      return 'Search by project name or key';
+    }
+    const selected = this.selectedProject();
+    const key = selected ? rowKey(selected) : '';
+    return key ? `Key ${key}` : 'Selected project';
+  }
+
+  projectName(project: Project): string {
+    return rowName(project);
+  }
+
+  projectMeta(project: Project): string {
+    const parts = [`Key ${rowKey(project)}`];
+    const id = rowID(project);
+    if (id) {
+      parts.push(id);
+    }
+    return parts.join(' · ');
+  }
+
+  isProjectSelected(project: Project): boolean {
+    return rowID(project) === this.filter.projectId;
+  }
+
+  toggleProjectPicker(): void {
+    this.projectPickerOpen.update((open) => {
+      const next = !open;
+      if (next) {
+        this.loadProjectOptions(this.projectPickerQuery());
+      }
+      return next;
+    });
+  }
+
+  closeProjectPicker(): void {
+    this.projectPickerOpen.set(false);
+  }
+
+  selectProject(project: Project): void {
+    const id = rowID(project);
+    if (!id) {
+      return;
+    }
+    this.filter.projectId = id;
+    this.selectedProject.set(project);
+    this.projectPickerQuery.set('');
+    this.offset.set(0);
+    this.closeProjectPicker();
+    this.search();
+  }
+
+  setProjectPickerQuery(q: string): void {
+    this.projectPickerQuery.set(q);
+    if (this.projectSearchDebounce) {
+      clearTimeout(this.projectSearchDebounce);
+    }
+    this.projectSearchDebounce = setTimeout(() => this.loadProjectOptions(q), 180);
+  }
+
+  loadProjectOptions(q: string): void {
+    this.projectSearchLoading.set(true);
+    const query = new URLSearchParams({
+      q: q.trim(),
+      limit: '20',
+      offset: '0',
+    });
+    this.api.get<{ projects: Project[] }>(`/projects?${query.toString()}`).subscribe({
+      next: (res) => {
+        const projects = res.projects ?? [];
+        this.projectOptions.set(projects);
+        if (this.filter.projectId && !this.selectedProject()) {
+          const selected = projects.find((project) => rowID(project) === this.filter.projectId);
+          if (selected) {
+            this.selectedProject.set(selected);
+          }
+        }
+        this.projectSearchLoading.set(false);
+      },
+      error: () => {
+        this.projectOptions.set([]);
+        this.projectSearchLoading.set(false);
+      },
+    });
   }
 
   formatTimestamp(raw: unknown): string {
@@ -106,7 +208,10 @@ export class AuditPage implements OnInit {
         this.offset.set(res.offset ?? this.offset());
         this.loading.set(false);
       },
-      error: (err: unknown) => applyApiFailureToSignals(this.error, this.errorRef, err, 'Failed to load audit'),
+      error: (err: unknown) => {
+        this.loading.set(false);
+        applyApiFailureToSignals(this.error, this.errorRef, err, 'Failed to load audit');
+      },
     });
   }
 
@@ -125,4 +230,11 @@ export class AuditPage implements OnInit {
     this.offset.set(this.offset() + this.limit());
     this.search();
   }
+}
+
+function shortProjectId(id: string): string {
+  if (!id || id.length < 10) {
+    return id;
+  }
+  return `${id.slice(0, 8)}…`;
 }

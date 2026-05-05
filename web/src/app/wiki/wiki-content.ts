@@ -121,6 +121,18 @@ export const WIKI_CONTENT: Record<WikiId, WikiContent> = {
         ],
       },
       {
+        title: 'Field examples (text inputs)',
+        bullets: [
+          'Key: `checkout_v2`',
+          'Name: `Checkout V2`',
+          'Description: `Enable the redesigned checkout flow`',
+          'Default value (JSON type): `{"variant":"control"}`',
+          'Rollout %: `50`',
+          'Rollout stickiness: `userId` (or an attribute name like `deviceId`)',
+          'Targeting rules (JSON): [[popup:View example]]\n[\n  {"attribute":"country","operator":"equals","value":"ID","serve":true},\n  {"attribute":"plan","operator":"in","value":["test","beta"],"serve":true}\n]',
+        ],
+      },
+      {
         title: 'When editing',
         bullets: [
           'Use History after changes to confirm version and change type.',

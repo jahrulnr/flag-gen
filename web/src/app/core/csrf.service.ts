@@ -11,7 +11,7 @@ export class CsrfService {
   private readonly current = signal<CSRFContract | null>(null);
 
   token(): string | null {
-    return this.current()?.token ?? null;
+    return this.currentOrEmbedded()?.token ?? null;
   }
 
   set(contract: CSRFContract | null): void {
@@ -19,7 +19,7 @@ export class CsrfService {
   }
 
   ensure(): Observable<CSRFContract> {
-    const existing = this.current();
+    const existing = this.currentOrEmbedded();
     if (existing && new Date(existing.expiresAt).getTime() > Date.now() + 30_000) {
       return of(existing);
     }
@@ -31,5 +31,32 @@ export class CsrfService {
       map((res) => res.csrf),
       tap((contract) => this.current.set(contract)),
     );
+  }
+
+  private currentOrEmbedded(): CSRFContract | null {
+    const existing = this.current();
+    if (existing) {
+      return existing;
+    }
+    const embedded = embeddedCSRF();
+    if (embedded) {
+      this.current.set(embedded);
+    }
+    return embedded;
+  }
+}
+
+function embeddedCSRF(): CSRFContract | null {
+  const doc = globalThis.document;
+  const el = doc?.getElementById('flag-gen-bootstrap');
+  const raw = el?.textContent;
+  if (!raw) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(raw) as { csrf?: CSRFContract | null };
+    return parsed.csrf ?? null;
+  } catch {
+    return null;
   }
 }

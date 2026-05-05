@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, HostListener, OnInit, ViewChild, effect, inject } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, effect, inject, signal } from '@angular/core';
 
 import { OwlLottieComponent } from './owl-lottie.component';
 import { WikiRouteService } from './wiki-route.service';
@@ -18,6 +18,10 @@ export class WikiHostComponent implements OnInit {
   @ViewChild('closeButton') private readonly closeButton?: ElementRef<HTMLButtonElement>;
   @ViewChild('drawer') private readonly drawer?: ElementRef<HTMLElement>;
 
+  readonly popupOpen = signal(false);
+  readonly popupTitle = signal('');
+  readonly popupBody = signal('');
+
   constructor() {
     effect(() => {
       if (this.wiki.isOpen()) {
@@ -35,12 +39,44 @@ export class WikiHostComponent implements OnInit {
   }
 
   close(): void {
+    this.popupOpen.set(false);
     this.wiki.close();
     queueMicrotask(() => this.wiki.lastTrigger()?.focus());
   }
 
+  openPopup(title: string, body: string): void {
+    this.popupTitle.set(title);
+    this.popupBody.set(body);
+    this.popupOpen.set(true);
+  }
+
+  closePopup(): void {
+    this.popupOpen.set(false);
+  }
+
+  parsePopupBullet(bullet: string): { text: string; popupLabel?: string; popupBody?: string } {
+    const marker = '[[popup:';
+    const start = bullet.indexOf(marker);
+    if (start < 0) {
+      return { text: bullet };
+    }
+    const labelStart = start + marker.length;
+    const labelEnd = bullet.indexOf(']]', labelStart);
+    if (labelEnd < 0) {
+      return { text: bullet };
+    }
+    const prefix = bullet.slice(0, start).trimEnd();
+    const popupLabel = bullet.slice(labelStart, labelEnd).trim();
+    const popupBody = bullet.slice(labelEnd + 2).trim();
+    return { text: prefix, popupLabel, popupBody };
+  }
+
   @HostListener('document:keydown.escape')
   onEscape(): void {
+    if (this.popupOpen()) {
+      this.closePopup();
+      return;
+    }
     if (this.wiki.isOpen()) {
       this.close();
     }

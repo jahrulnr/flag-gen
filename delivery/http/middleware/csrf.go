@@ -64,6 +64,33 @@ func (p *CSRFProtection) Issue(c *gin.Context) CSRFContract {
 	}
 }
 
+func (p *CSRFProtection) IssueHTTP(r *http.Request, headers http.Header) CSRFContract {
+	session := ""
+	if cookie, err := r.Cookie(p.cookieName); err == nil {
+		session = cookie.Value
+	}
+	if session == "" {
+		session = hex.EncodeToString(randomBytes(32))
+		secure := r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
+		cookie := &http.Cookie{
+			Name:     p.cookieName,
+			Value:    session,
+			Path:     "/",
+			MaxAge:   3600,
+			HttpOnly: true,
+			SameSite: http.SameSiteLaxMode,
+			Secure:   secure,
+		}
+		headers.Add("Set-Cookie", cookie.String())
+	}
+	expires := time.Now().UTC().Add(30 * time.Minute)
+	return CSRFContract{
+		HeaderName: CSRFHeaderName,
+		Token:      p.sign(session, expires),
+		ExpiresAt:  expires,
+	}
+}
+
 func (p *CSRFProtection) Validate(c *gin.Context) error {
 	session, err := c.Cookie(p.cookieName)
 	if err != nil || session == "" {

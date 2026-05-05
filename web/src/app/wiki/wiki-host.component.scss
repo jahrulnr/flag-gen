@@ -187,6 +187,88 @@
   padding-left: 1.1rem;
 }
 
+.wiki-inline-button {
+  background: rgb(148 163 184 / 10%);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  color: var(--fg-primary);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  margin-left: 0.4rem;
+  padding: 0.24rem 0.55rem;
+  text-transform: uppercase;
+}
+
+.wiki-inline-button:hover {
+  background: rgb(52 211 153 / 12%);
+  border-color: rgb(52 211 153 / 28%);
+}
+
+.wiki-inline-button:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: 0;
+}
+
+.wiki-popup {
+  inset: 0;
+  pointer-events: auto;
+  position: fixed;
+  z-index: 60;
+}
+
+.wiki-popup__backdrop {
+  background: rgb(2 6 23 / 72%);
+  inset: 0;
+  position: absolute;
+}
+
+.wiki-popup__panel {
+  background: rgb(15 23 42 / 98%);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  box-shadow: 0 28px 80px rgb(2 6 23 / 60%);
+  display: grid;
+  gap: 0.75rem;
+  left: 50%;
+  max-height: min(80dvh, 42rem);
+  max-width: min(92vw, 42rem);
+  overflow: hidden;
+  padding: 0.9rem;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.wiki-popup__header {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.wiki-popup__header h3 {
+  margin: 0;
+}
+
+.wiki-code {
+  background: rgb(2 6 23 / 40%);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  color: var(--fg-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  margin: 0;
+  overflow: auto;
+  padding: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wiki-fab,
   .wiki-fab:hover {

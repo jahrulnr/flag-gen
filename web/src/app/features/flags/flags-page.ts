@@ -44,6 +44,10 @@ export class FlagsPage implements OnInit {
   readonly q = signal('');
   readonly loading = signal(false);
   readonly valueTypeMenuOpen = signal(false);
+  readonly formDialogOpen = signal(false);
+  readonly formSubmitting = signal(false);
+  readonly formError = signal<string | null>(null);
+  readonly successMessage = signal<string | null>(null);
 
   readonly destroyDialog = viewChild.required(DestructiveConfirmDialogComponent);
 
@@ -99,16 +103,31 @@ export class FlagsPage implements OnInit {
   }
 
   create(): void {
-    const body = this.toPayload();
-    this.error.set(null);
-    this.errorRef.set(null);
+    const body = this.payloadOrShowError();
+    if (!body) {
+      return;
+    }
+    this.formSubmitting.set(true);
+    this.formError.set(null);
     this.api.post<{ flag: Flag }>(this.flagsPath(), body).subscribe({
       next: () => {
-        this.form = this.defaultForm();
+        this.formSubmitting.set(false);
+        this.closeFormDialog();
+        this.successMessage.set(`Flag ${this.form.key} created`);
         this.reload();
       },
-      error: (err: unknown) => applyApiFailureToSignals(this.error, this.errorRef, err, 'Failed to create flag'),
+      error: (err: unknown) => {
+        this.formSubmitting.set(false);
+        this.formError.set(errorText(err, 'Failed to create flag'));
+      },
     });
+  }
+
+  openCreate(): void {
+    this.form = this.defaultForm();
+    this.formError.set(null);
+    this.successMessage.set(null);
+    this.formDialogOpen.set(true);
   }
 
   edit(flag: Flag): void {
@@ -126,20 +145,41 @@ export class FlagsPage implements OnInit {
       rulesJson: JSON.stringify(flag.rules ?? flag.Rules ?? [], null, 2),
       version: flag.version ?? flag.Version ?? 1,
     };
+    this.formError.set(null);
+    this.successMessage.set(null);
+    this.formDialogOpen.set(true);
+  }
+
+  closeFormDialog(): void {
+    if (this.formSubmitting()) {
+      return;
+    }
+    this.formDialogOpen.set(false);
+    this.formError.set(null);
+    this.valueTypeMenuOpen.set(false);
   }
 
   update(): void {
     if (!this.form.id) {
       return;
     }
-    this.error.set(null);
-    this.errorRef.set(null);
-    this.api.patch<{ flag: Flag }>(`${this.flagsPath()}/${this.form.id}`, this.toPayload(true)).subscribe({
+    const body = this.payloadOrShowError(true);
+    if (!body) {
+      return;
+    }
+    this.formSubmitting.set(true);
+    this.formError.set(null);
+    this.api.patch<{ flag: Flag }>(`${this.flagsPath()}/${this.form.id}`, body).subscribe({
       next: () => {
-        this.form = this.defaultForm();
+        this.formSubmitting.set(false);
+        this.closeFormDialog();
+        this.successMessage.set(`Flag ${this.form.key} updated`);
         this.reload();
       },
-      error: (err: unknown) => applyApiFailureToSignals(this.error, this.errorRef, err, 'Failed to update flag'),
+      error: (err: unknown) => {
+        this.formSubmitting.set(false);
+        this.formError.set(errorText(err, 'Failed to update flag'));
+      },
     });
   }
 
@@ -222,8 +262,17 @@ export class FlagsPage implements OnInit {
     return `/projects/${this.projectId()}/environments/${this.environmentKey()}/flags`;
   }
 
-  private toPayload(includeVersion = false): Record<string, unknown> {
-    const rules = parseJSON(this.form.rulesJson, []);
+  private payloadOrShowError(includeVersion = false): Record<string, unknown> | null {
+    const rules = parseRules(this.form.rulesJson);
+    if (!rules.ok) {
+      this.formError.set(rules.message);
+      return null;
+    }
+    const defaultValue = this.form.valueType === 'boolean' ? this.form.defaultValue === 'true' : parseJSON(this.form.defaultValue, invalidJSON);
+    if (defaultValue === invalidJSON) {
+      this.formError.set('Default value must be a valid JSON literal when value type is JSON.');
+      return null;
+    }
     const payload: Record<string, unknown> = {
       key: this.form.key,
       name: this.form.name,
@@ -232,9 +281,9 @@ export class FlagsPage implements OnInit {
       clientSide: this.form.clientSide,
       value: {
         type: this.form.valueType,
-        default: this.form.valueType === 'boolean' ? this.form.defaultValue === 'true' : parseJSON(this.form.defaultValue, this.form.defaultValue),
+        default: defaultValue,
       },
-      rules,
+      rules: rules.value,
       rollout: {
         percentage: Number(this.form.rolloutPercentage),
         stickiness: this.form.rolloutStickiness,
@@ -264,10 +313,37 @@ export class FlagsPage implements OnInit {
   }
 }
 
+const invalidJSON = Symbol('invalid-json');
+
 function parseJSON(value: string, fallback: unknown): unknown {
   try {
     return JSON.parse(value);
   } catch {
     return fallback;
   }
+}
+
+function parseRules(value: string): { ok: true; value: unknown[] } | { ok: false; message: string } {
+  const parsed = parseJSON(value, invalidJSON);
+  if (parsed === invalidJSON) {
+    return { ok: false, message: 'Targeting rules must be valid JSON. Use [] when no targeting is needed.' };
+  }
+  if (!Array.isArray(parsed)) {
+    return { ok: false, message: 'Targeting rules must be a JSON array. Use [] when no targeting is needed.' };
+  }
+  const badIndex = parsed.findIndex((rule) => rule === null || typeof rule !== 'object' || Array.isArray(rule));
+  if (badIndex >= 0) {
+    return { ok: false, message: `Targeting rule #${badIndex + 1} must be an object, not a string or primitive value.` };
+  }
+  return { ok: true, value: parsed };
+}
+
+function errorText(err: unknown, fallback: string): string {
+  if (err && typeof err === 'object' && 'message' in err) {
+    const msg = String((err as { message?: unknown }).message ?? '').trim();
+    if (msg) {
+      return msg;
+    }
+  }
+  return fallback;
 }
