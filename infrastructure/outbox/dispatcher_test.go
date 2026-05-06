@@ -84,6 +84,23 @@ func TestDispatcher_Tick_MarkPublishedOnSuccess(t *testing.T) {
 	require.Empty(t, repo.failed)
 }
 
+func TestDispatcher_Tick_RunsAfterPublishedHookOnSuccess(t *testing.T) {
+	event := entity.OutboxEvent{ID: "e1", EventType: "flag.updated", Payload: []byte(`{"x":1}`)}
+	repo := &fakeOutboxRepo{events: []entity.OutboxEvent{event}}
+	pub := &fakePublisher{err: nil}
+	d := NewDispatcher("w1", 10, 1*time.Millisecond, 5*time.Second, "flaggen.events", 1*time.Second, repo, pub)
+
+	var hooked []string
+	d.SetAfterPublished(func(ctx context.Context, e entity.OutboxEvent) {
+		_ = ctx
+		hooked = append(hooked, e.ID)
+	})
+
+	require.NoError(t, d.tick(context.Background()))
+	require.Equal(t, []string{"e1"}, repo.published)
+	require.Equal(t, []string{"e1"}, hooked)
+}
+
 func TestDispatcher_Tick_MarkFailedOnError(t *testing.T) {
 	repo := &fakeOutboxRepo{events: []entity.OutboxEvent{{ID: "e1", EventType: "flag.updated", Payload: []byte(`{"x":1}`)}}}
 	pub := &fakePublisher{err: errors.New("publish failed")}

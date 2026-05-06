@@ -1,6 +1,8 @@
 package http
 
 import (
+	"strings"
+
 	"flag-gen/application/usecase"
 	"flag-gen/delivery/http/handler"
 	"flag-gen/delivery/http/middleware"
@@ -16,6 +18,12 @@ func RegisterV1Routes(r *gin.Engine, app *di.ApplicationState) {
 func RegisterAPIRoutes(r *gin.Engine, app *di.ApplicationState, csrf *middleware.CSRFProtection) {
 	api := r.Group("/api")
 	api.Use(csrf.Middleware())
+	authHandler := handler.NewAuthHandler(app.MySQL.SQL())
+	api.POST("/auth/login", authHandler.Login)
+	api.Use(middleware.DashboardSession(app.MySQL.SQL(), handler.DashboardSessionCookie))
+	api.GET("/auth/me", authHandler.Me)
+	api.POST("/auth/logout", authHandler.Logout)
+	api.Use(middleware.DashboardPermission())
 	RegisterRoutes(api, app, csrf)
 }
 
@@ -72,6 +80,25 @@ func RegisterRoutes(group *gin.RouterGroup, app *di.ApplicationState, csrf *midd
 	publicHandler := handler.NewPublicFlagsHandler(listFlags)
 	public.GET("/projects/:projectId/environments/:environmentKey/flags", publicHandler.List)
 
+	apiKeysHandler := handler.NewAPIKeysHandler(app.MySQL.SQL())
+	group.GET("/projects/:projectId/environments/:environmentKey/api-keys", apiKeysHandler.List)
+	group.POST("/projects/:projectId/environments/:environmentKey/api-keys", apiKeysHandler.Create)
+	group.DELETE("/projects/:projectId/environments/:environmentKey/api-keys/:keyId", apiKeysHandler.Revoke)
+	group.POST("/projects/:projectId/environments/:environmentKey/api-keys/:keyId/rotate", apiKeysHandler.Rotate)
+
+	usersHandler := handler.NewUsersHandler(app.MySQL.SQL())
+	rolesHandler := handler.NewRolesHandler(app.MySQL.SQL())
+	group.GET("/users", usersHandler.List)
+	group.POST("/users", usersHandler.Create)
+	group.GET("/users/:userId", usersHandler.Get)
+	group.PATCH("/users/:userId", usersHandler.Update)
+	group.DELETE("/users/:userId", usersHandler.Disable)
+	group.GET("/roles", rolesHandler.List)
+	group.POST("/roles", rolesHandler.Create)
+	group.GET("/roles/:roleId", rolesHandler.Get)
+	group.PATCH("/roles/:roleId", rolesHandler.Update)
+	group.DELETE("/roles/:roleId", rolesHandler.Delete)
+
 	group.GET("/projects", projectsHandler.List)
 	group.POST("/projects", projectsHandler.Create)
 	group.DELETE("/projects/:projectId", projectsHandler.Delete)
@@ -88,8 +115,15 @@ func RegisterRoutes(group *gin.RouterGroup, app *di.ApplicationState, csrf *midd
 	group.GET("/projects/:projectId/environments/:environmentKey/flags", flagsHandler.List)
 	group.POST("/projects/:projectId/environments/:environmentKey/flags", flagsHandler.Create)
 	// Static /flags/evaluate before /flags/:flagKey so "evaluate" is never captured as a key.
-	group.POST("/projects/:projectId/environments/:environmentKey/flags/evaluate", evalHandler.Evaluate)
-	group.GET("/projects/:projectId/environments/:environmentKey/flags/evaluate", evalHandler.EvaluateGET)
+	requireRuntimeKey := strings.EqualFold(app.Config.App.Env, "production")
+	group.POST("/projects/:projectId/environments/:environmentKey/flags/evaluate",
+		middleware.APIKeyRateLimit(20, 60),
+		middleware.RequireAPIKeyScope(app.MySQL.SQL(), "flags:evaluate", requireRuntimeKey),
+		evalHandler.Evaluate)
+	group.GET("/projects/:projectId/environments/:environmentKey/flags/evaluate",
+		middleware.APIKeyRateLimit(20, 60),
+		middleware.RequireAPIKeyScope(app.MySQL.SQL(), "flags:evaluate", requireRuntimeKey),
+		evalHandler.EvaluateGET)
 
 	group.GET("/projects/:projectId/environments/:environmentKey/flags/:flagKey", flagsHandler.GetByKey)
 	group.PATCH("/projects/:projectId/environments/:environmentKey/flags/:flagKey", flagsHandler.Update)
@@ -102,5 +136,5 @@ func RegisterRoutes(group *gin.RouterGroup, app *di.ApplicationState, csrf *midd
 	group.GET("/projects/:projectId/audit", dashboardHandler.ListAudit)
 
 	wsHandler := handler.NewBroadcastWSHandler(app.Config, app.BroadcastHub, app.ScopedFlags)
-	group.GET("/broadcast/flags", wsHandler.Connect)
+	group.GET("/broadcast/flags", middleware.RequireAPIKeyScope(app.MySQL.SQL(), "broadcast:subscribe", false), wsHandler.Connect)
 }

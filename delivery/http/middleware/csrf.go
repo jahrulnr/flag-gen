@@ -42,7 +42,7 @@ func NewCSRFProtection(secret string, cookieName string) *CSRFProtection {
 
 func (p *CSRFProtection) Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if p == nil || isSafeMethod(c.Request.Method) || strings.HasPrefix(c.Request.URL.Path, "/api/security/") {
+		if p == nil || isSafeMethod(c.Request.Method) || strings.HasPrefix(c.Request.URL.Path, "/api/security/") || c.Request.URL.Path == "/api/auth/login" {
 			c.Next()
 			return
 		}

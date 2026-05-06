@@ -1,0 +1,13 @@
+@use './roles-page.scss';
+
+.role-line {
+  color: var(--fg-muted);
+  font-size: 0.85rem;
+  margin-top: 0.6rem;
+}
+
+.badge--disabled {
+  background: rgb(251 113 133 / 12%);
+  border-color: rgb(251 113 133 / 24%);
+  color: #fecdd3;
+}

@@ -41,11 +41,12 @@ func InitializeApplication() (*ApplicationState, error) {
 	scopedFlagCache := ProvideScopedFlagCache(l1, l2, singleflight, flagRepository, reader, snapshotMetadataRepository, degradedBreaker, negativeFlagCache)
 	amqpPublisher := ProvideAMQPPublisher(config)
 	dispatcher := ProvideOutboxDispatcher(config, outboxRepository, amqpPublisher)
+	webhookWorker := ProvideWebhookWorker(config)
 	systemService := ProvideSystemService(db, config)
 	writer := ProvideSnapshotWriter(config)
 	snapshotPointer := ProvideSnapshotPointer(flagRepository, environmentRepository, snapshotMetadataRepository, writer, scopedFlagCache)
 	adminReadRepository := ProvideAdminReadRepository(db)
 	hub := ProvideBroadcastHub()
-	applicationState := ProvideApplicationState(config, db, universalClient, projectRepository, environmentRepository, segmentRepository, idempotencyRepository, flagRepository, outboxRepository, snapshotMetadataRepository, scopedFlagCache, amqpPublisher, dispatcher, systemService, snapshotPointer, adminReadRepository, hub, singleflight)
+	applicationState := ProvideApplicationState(config, db, universalClient, projectRepository, environmentRepository, segmentRepository, idempotencyRepository, flagRepository, outboxRepository, snapshotMetadataRepository, scopedFlagCache, amqpPublisher, dispatcher, webhookWorker, systemService, snapshotPointer, adminReadRepository, hub, singleflight)
 	return applicationState, nil
 }

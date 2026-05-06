@@ -5,6 +5,7 @@ import (
 
 	"flag-gen/application/usecase"
 	"flag-gen/delivery/http/response"
+	"flag-gen/domain/entity"
 	"flag-gen/domain/valueobject"
 
 	"github.com/gin-gonic/gin"
@@ -15,8 +16,31 @@ type PublicFlagsHandler struct {
 	list *usecase.ListFlagsUsecase
 }
 
+type publicFlagDTO struct {
+	Key     string `json:"key"`
+	Enabled bool   `json:"enabled"`
+	Value   any    `json:"value"`
+	Version int    `json:"version"`
+}
+
 func NewPublicFlagsHandler(list *usecase.ListFlagsUsecase) *PublicFlagsHandler {
 	return &PublicFlagsHandler{list: list}
+}
+
+func clientSideFlags(flags []entity.Flag) []publicFlagDTO {
+	out := make([]publicFlagDTO, 0, len(flags))
+	for _, f := range flags {
+		if !f.ClientSide {
+			continue
+		}
+		out = append(out, publicFlagDTO{
+			Key:     f.Key,
+			Enabled: f.Enabled,
+			Value:   f.Value.Default,
+			Version: f.Version,
+		})
+	}
+	return out
 }
 
 func (h *PublicFlagsHandler) List(c *gin.Context) {
@@ -29,5 +53,5 @@ func (h *PublicFlagsHandler) List(c *gin.Context) {
 		response.AbortErr(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"flags": flags, "correlationId": response.CorrelationID(c)})
+	c.JSON(http.StatusOK, gin.H{"flags": clientSideFlags(flags), "correlationId": response.CorrelationID(c)})
 }

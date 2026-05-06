@@ -120,9 +120,11 @@ func (c *ScopedFlagCache) Get(ctx context.Context, scope valueobject.Scope) ([]e
 			sf, _, sErr := c.snapReader.ReadValidated(scope.ProjectID, scope.EnvironmentKey)
 			if sErr != nil && c.snapMeta != nil {
 				if errors.Is(sErr, snapshot.ErrChecksumMismatch) {
+					metrics.Inc("snapshot_file_corruption_total", 1)
 					_ = c.snapMeta.MarkInvalidByScope(ctx, scope)
 				} else if !os.IsNotExist(sErr) && !errors.Is(sErr, os.ErrNotExist) {
 					// Corrupt/partial JSON or scope mismatch: mark invalid when metadata row exists.
+					metrics.Inc("snapshot_file_corruption_total", 1)
 					_ = c.snapMeta.MarkInvalidByScope(ctx, scope)
 				}
 			}

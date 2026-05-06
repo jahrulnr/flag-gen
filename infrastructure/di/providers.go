@@ -9,6 +9,7 @@ import (
 	"flag-gen/infrastructure/config"
 	"flag-gen/infrastructure/outbox"
 	mysqlrepo "flag-gen/infrastructure/repository/mysql"
+	"flag-gen/infrastructure/webhook"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -72,6 +73,10 @@ func ProvideOutboxDispatcher(cfg config.Config, outboxRepo repository.OutboxRepo
 	)
 }
 
+func ProvideWebhookWorker(cfg config.Config) *webhook.Worker {
+	return webhook.NewWorker(cfg.Webhook)
+}
+
 func ProvideApplicationState(
 	cfg config.Config,
 	db *mysqlrepo.DB,
@@ -86,6 +91,7 @@ func ProvideApplicationState(
 	scopedFlags *cache.ScopedFlagCache,
 	pub *broker.AMQPPublisher,
 	dispatcher *outbox.Dispatcher,
+	webhooks *webhook.Worker,
 	system *usecase.SystemService,
 	snapPtr *usecase.SnapshotPointer,
 	admin repository.AdminReadRepository,
@@ -107,6 +113,7 @@ func ProvideApplicationState(
 		Singleflight:     sf,
 		AMQPPublisher:    pub,
 		OutboxDispatcher: dispatcher,
+		WebhookWorker:    webhooks,
 		System:           system,
 		SnapshotPointer:  snapPtr,
 		AdminRead:        admin,

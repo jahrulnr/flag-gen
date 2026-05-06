@@ -19,6 +19,29 @@ The service exposes in-process counters and latency samples at **`GET /v1/system
 | `scoped_cache_circuit_block_total` | counter | Scoped cache reads blocked while circuit open |
 | `scoped_cache_service_degraded_total` | counter | Scoped cache reads that exhausted DB + snapshot and returned degraded |
 | `circuit_breaker_open_total` | counter | Times the degraded breaker entered the open window |
+| `redis_reconnect_events_total` | counter | Redis connection errors that started a background reconnect probe |
+| `redis_reconnect_events_coalesced_total` | counter | Redis reconnect events skipped because a probe was already running |
+| `redis_reconnect_attempts_total` | counter | Redis reconnect probe attempts |
+| `redis_reconnect_success_total` | counter | Redis reconnect probes that observed Redis healthy again |
+| `redis_reconnect_failures_total` | counter | Redis reconnect probes that exhausted backoff |
+| `snapshot_file_corruption_total` | counter | Snapshot checksum/format/scope validation failures |
+| `snapshot_outbox_triggers_total` | counter | Snapshot refresh triggers after a flag outbox event publishes |
+| `snapshot_outbox_trigger_failures_total` | counter | Outbox-published snapshot triggers skipped because scope payload was invalid |
+| `webhook_enqueued_total` | counter | Outbox events queued for webhook delivery |
+| `webhook_queue_dropped_total` | counter | Webhook events dropped because the in-memory queue is full |
+| `webhook_delivery_attempts_total` | counter | HTTP webhook delivery attempts |
+| `webhook_delivery_success_total` | counter | Successful webhook deliveries |
+| `webhook_delivery_failures_total` | counter | Failed webhook delivery attempts |
+
+## Alert signals
+
+Recommended first alerts from the implemented counters:
+
+- DB/cache failover active: page or warn on sustained `scoped_cache_service_degraded_total` or `evaluate_service_degraded_total` increases.
+- Cache degradation: warn on `redis_reconnect_failures_total`; page if paired with high evaluate latency or service degradation.
+- File corruption: page on any `snapshot_file_corruption_total` increase.
+- Broker publish failures: warn on `outbox_publish_failures_total`; page if the rate stays non-zero for multiple dispatcher intervals.
+- Webhook delivery failures: warn on sustained `webhook_delivery_failures_total`, especially if paired with `webhook_queue_dropped_total`.
 
 ## Logs
 

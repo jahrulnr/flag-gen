@@ -1,0 +1,75 @@
+@use '../projects/projects-page.scss';
+
+.wide {
+  align-items: flex-end;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(14rem, 1fr)) auto auto;
+}
+
+.field--full {
+  grid-column: 1 / -1;
+}
+
+textarea,
+select {
+  background: rgb(15 23 42 / 86%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--fg-primary);
+  min-height: 2.65rem;
+  padding: 0.65rem 0.75rem;
+}
+
+textarea:focus,
+select:focus {
+  border-color: rgb(52 211 153 / 52%);
+  box-shadow: var(--focus-ring);
+  outline: 0;
+}
+
+.permission-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.permission-chips button,
+.permission-list span,
+.badge {
+  background: rgb(59 130 246 / 12%);
+  border: 1px solid rgb(96 165 250 / 22%);
+  border-radius: 999px;
+  color: #bfdbfe;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0.3rem 0.5rem;
+}
+
+.permission-chips button {
+  cursor: pointer;
+}
+
+.permission-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.65rem;
+}
+
+.badge {
+  background: rgb(52 211 153 / 12%);
+  border-color: rgb(52 211 153 / 24%);
+  color: #a7f3d0;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  transform: none;
+}
+
+@media (max-width: 900px) {
+  .wide {
+    grid-template-columns: 1fr;
+  }
+}

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -13,8 +14,11 @@ import (
 	"flag-gen/application/jobs"
 	deliveryhttp "flag-gen/delivery/http"
 	"flag-gen/delivery/http/middleware"
+	"flag-gen/domain/entity"
+	"flag-gen/domain/valueobject"
 	"flag-gen/infrastructure/broker"
 	"flag-gen/infrastructure/di"
+	"flag-gen/infrastructure/metrics"
 
 	"github.com/SALT-Indonesia/salt-pkg/logmanager"
 	"github.com/SALT-Indonesia/salt-pkg/logmanager/integrations/lmgin"
@@ -113,8 +117,19 @@ func main() {
 	// Graceful shutdown setup
 	go gracefulShutdown(srv, 5*time.Second)
 	if app.Config.Outbox.Enabled && app.OutboxDispatcher != nil {
+		app.OutboxDispatcher.SetAfterPublished(func(ctx context.Context, e entity.OutboxEvent) {
+			triggerSnapshotAfterOutboxPublished(ctx, app, e)
+			if app.WebhookWorker != nil {
+				app.WebhookWorker.Enqueue(e)
+			}
+		})
 		go func() {
 			_ = app.OutboxDispatcher.Run(context.Background())
+		}()
+	}
+	if app.WebhookWorker != nil && app.WebhookWorker.Enabled() {
+		go func() {
+			_ = app.WebhookWorker.Run(context.Background())
 		}()
 	}
 
@@ -154,6 +169,31 @@ func main() {
 			log.Fatalf("Non-SSL Server failed: %v", err)
 		}
 	}
+}
+
+func triggerSnapshotAfterOutboxPublished(ctx context.Context, app *di.ApplicationState, e entity.OutboxEvent) {
+	if app == nil || app.SnapshotPointer == nil || e.AggregateType != "flag" {
+		return
+	}
+	var payload struct {
+		ProjectID      string `json:"projectId"`
+		EnvironmentKey string `json:"environmentKey"`
+	}
+	if err := json.Unmarshal(e.Payload, &payload); err != nil {
+		metrics.Inc("snapshot_outbox_trigger_failures_total", 1)
+		log.Printf("snapshot outbox trigger payload decode failed event_id=%s err=%v", e.ID, err)
+		return
+	}
+	if payload.ProjectID == "" || payload.EnvironmentKey == "" {
+		metrics.Inc("snapshot_outbox_trigger_failures_total", 1)
+		log.Printf("snapshot outbox trigger skipped event_id=%s missing scope", e.ID)
+		return
+	}
+	metrics.Inc("snapshot_outbox_triggers_total", 1)
+	app.SnapshotPointer.AfterFlagMutation(ctx, valueobject.Scope{
+		ProjectID:      payload.ProjectID,
+		EnvironmentKey: payload.EnvironmentKey,
+	})
 }
 
 func gracefulShutdown(srv *http.Server, timeout time.Duration) {

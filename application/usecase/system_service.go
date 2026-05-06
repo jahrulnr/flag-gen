@@ -163,8 +163,8 @@ func (s *SystemService) Install(ctx context.Context, req InstallRequest) (Instal
 	userID := uuid.NewString()
 	now := time.Now().UTC()
 	_, err = s.db.ExecContext(ctx, `
-INSERT INTO users (id, email, name, password_hash, two_factor_enabled, status, created_at, updated_at)
-VALUES (?, ?, ?, ?, FALSE, 'active', ?, ?)`,
+INSERT INTO users (id, email, name, password_hash, two_factor_enabled, status, role_id, created_at, updated_at)
+VALUES (?, ?, ?, ?, FALSE, 'active', 'f1000000-0000-4000-8000-000000000004', ?, ?)`,
 		userID, req.Admin.Email, req.Admin.Name, string(pwHash), now, now)
 	if err != nil {
 		return InstallResult{}, err

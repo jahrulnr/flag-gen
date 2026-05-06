@@ -19,6 +19,7 @@ type Config struct {
 	Snapshot  SnapshotConfig
 	RabbitMQ  RabbitMQConfig
 	Outbox    OutboxWorkerConfig
+	Webhook   WebhookConfig
 	Dashboard DashboardConfig
 	Security  SecurityConfig
 	CORS      CORSConfig
@@ -107,6 +108,13 @@ type OutboxWorkerConfig struct {
 	LockFor    time.Duration
 }
 
+type WebhookConfig struct {
+	Enabled bool
+	URLs    []string
+	Secret  string
+	Timeout time.Duration
+}
+
 func Load() (Config, error) {
 	var cfg Config
 
@@ -189,6 +197,15 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	cfg.Outbox.LockFor = lockFor
+
+	cfg.Webhook.Enabled = getBool("WEBHOOK_WORKER_ENABLED", false)
+	cfg.Webhook.URLs = splitCSV(getString("WEBHOOK_URLS", ""))
+	cfg.Webhook.Secret = getString("WEBHOOK_SECRET", "")
+	whTimeout, err := getDurationSeconds("WEBHOOK_TIMEOUT", 5*time.Second)
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.Webhook.Timeout = whTimeout
 
 	cfg.MigrationsDir = getString("MIGRATIONS_DIR", "migrations/mysql")
 	cfg.AllowDevMigrate = getBool("ALLOW_DEV_MIGRATE", false)

@@ -14,11 +14,12 @@ import (
 )
 
 type RedisL2 struct {
-	c redis.UniversalClient
+	c           redis.UniversalClient
+	reconnecter *RedisReconnecter
 }
 
 func NewRedisL2(c redis.UniversalClient) *RedisL2 {
-	return &RedisL2{c: c}
+	return &RedisL2{c: c, reconnecter: NewRedisReconnecter(c)}
 }
 
 func (r *RedisL2) Get(ctx context.Context, scopeKey string) ([]entity.Flag, bool, error) {
@@ -39,6 +40,7 @@ func (r *RedisL2) Get(ctx context.Context, scopeKey string) ([]entity.Flag, bool
 		if errors.Is(err, redis.Nil) {
 			return nil, false, nil
 		}
+		r.reconnecter.Notify(ctx, err)
 		return nil, false, err
 	}
 
@@ -63,6 +65,9 @@ func (r *RedisL2) Set(ctx context.Context, scopeKey string, flags []entity.Flag,
 		}
 		time.Sleep(time.Duration(50*(attempt+1)) * time.Millisecond)
 	}
+	if last != nil {
+		r.reconnecter.Notify(ctx, last)
+	}
 	return last
 }
 
@@ -74,6 +79,9 @@ func (r *RedisL2) Del(ctx context.Context, scopeKey string) error {
 			break
 		}
 		time.Sleep(time.Duration(50*(attempt+1)) * time.Millisecond)
+	}
+	if last != nil {
+		r.reconnecter.Notify(ctx, last)
 	}
 	return last
 }

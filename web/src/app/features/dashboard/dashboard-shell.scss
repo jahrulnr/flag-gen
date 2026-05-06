@@ -1,16 +1,13 @@
 .shell {
   background:
-    radial-gradient(circle at 18% 0%, rgb(52 211 153 / 10%), transparent 26rem),
-    var(--bg-shell);
+    radial-gradient(circle at 18% 0%, rgb(52 211 153 / 10%), transparent 26rem), var(--bg-shell);
   display: grid;
   grid-template-columns: 260px 1fr;
   min-height: 100dvh;
 }
 
 .sidebar {
-  background:
-    linear-gradient(180deg, rgb(15 23 42 / 92%), rgb(5 8 15 / 98%)),
-    var(--surface-1);
+  background: linear-gradient(180deg, rgb(15 23 42 / 92%), rgb(5 8 15 / 98%)), var(--surface-1);
   border-right: 1px solid var(--border-subtle);
   color: var(--fg-primary);
   padding: 1.25rem;
@@ -119,8 +116,7 @@
 
 .workspace {
   background:
-    radial-gradient(circle at 80% 8%, rgb(59 130 246 / 8%), transparent 26rem),
-    rgb(8 13 24 / 82%);
+    radial-gradient(circle at 80% 8%, rgb(59 130 246 / 8%), transparent 26rem), rgb(8 13 24 / 82%);
   min-width: 0;
 }
 
@@ -150,6 +146,25 @@
   align-items: center;
   display: flex;
   flex-shrink: 0;
+  gap: 0.5rem;
+}
+
+.topbar__icon {
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+
+  &:hover {
+    border-color: var(--border-strong);
+    color: var(--fg-primary);
+  }
 }
 
 .breadcrumb {

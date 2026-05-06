@@ -5,6 +5,7 @@ import { filter } from 'rxjs/operators';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { ApiService } from '../../core/api.service';
+import { AuthService } from '../../core/auth.service';
 import { ProjectDirectoryService } from '../../core/project-directory.service';
 import { ConnectivityService, ConnectivityState } from '../../core/connectivity.service';
 import { Flag, rowID, rowKey, SystemStatus } from '../../core/models';
@@ -19,6 +20,7 @@ import { RealtimeService } from '../realtime/realtime.service';
 })
 export class DashboardShell implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly auth = inject(AuthService);
   readonly projectDirectory = inject(ProjectDirectoryService);
   private readonly workspace = inject(WorkspaceContextService);
   private readonly router = inject(Router);
@@ -68,10 +70,19 @@ export class DashboardShell implements OnInit {
     this.projectDirectory.reload();
   }
 
+  signOut(): void {
+    this.auth.signOut();
+    void this.router.navigateByUrl('/login');
+  }
+
   private applyUrl(url: string): void {
     const path = url.split('?')[0];
     this.historyFlagLabel.set(null);
-    if (path.includes('/dashboard/audit')) {
+    if (
+      path.includes('/dashboard/audit') ||
+      path.includes('/dashboard/users') ||
+      path.includes('/dashboard/roles')
+    ) {
       this.selectedProjectId.set('');
       this.selectedEnvironmentKey.set('');
       return;
@@ -123,17 +134,24 @@ export class DashboardShell implements OnInit {
     }
   }
 
-  private loadHistoryFlagCrumb(projectId: string, environmentKey: string, flagRouteParam: string): void {
-    this.api.get<{ flags: Flag[] }>(`/projects/${projectId}/environments/${environmentKey}/flags`).subscribe({
-      next: (res) => {
-        const flags = res.flags ?? [];
-        const hit =
-          flags.find((f) => rowID(f) === flagRouteParam) ?? flags.find((f) => rowKey(f) === flagRouteParam);
-        const label = hit ? rowKey(hit) : shortRouteId(flagRouteParam);
-        this.historyFlagLabel.set(label);
-      },
-      error: () => this.historyFlagLabel.set(shortRouteId(flagRouteParam)),
-    });
+  private loadHistoryFlagCrumb(
+    projectId: string,
+    environmentKey: string,
+    flagRouteParam: string,
+  ): void {
+    this.api
+      .get<{ flags: Flag[] }>(`/projects/${projectId}/environments/${environmentKey}/flags`)
+      .subscribe({
+        next: (res) => {
+          const flags = res.flags ?? [];
+          const hit =
+            flags.find((f) => rowID(f) === flagRouteParam) ??
+            flags.find((f) => rowKey(f) === flagRouteParam);
+          const label = hit ? rowKey(hit) : shortRouteId(flagRouteParam);
+          this.historyFlagLabel.set(label);
+        },
+        error: () => this.historyFlagLabel.set(shortRouteId(flagRouteParam)),
+      });
   }
 
   projectTitle(projectId: string): string {
@@ -147,6 +165,18 @@ export class DashboardShell implements OnInit {
 
   isAuditRoute(): boolean {
     return this.routerUrl().split('?')[0].includes('/dashboard/audit');
+  }
+
+  isUsersRoute(): boolean {
+    return this.routerUrl().split('?')[0].includes('/dashboard/users');
+  }
+
+  isRolesRoute(): boolean {
+    return this.routerUrl().split('?')[0].includes('/dashboard/roles');
+  }
+
+  isAccessRoute(): boolean {
+    return this.isUsersRoute() || this.isRolesRoute();
   }
 
   isProjectsListCurrent(): boolean {

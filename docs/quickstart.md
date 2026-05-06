@@ -52,6 +52,35 @@ go run ./cmd/app
 Health: `GET http://localhost:<APP_PORT>/health` (default in `.env.example` is `6123`, aligned with `make dev` + Angular dev API URL)  
 Lifecycle: `GET http://localhost:<APP_PORT>/v1/system/status`
 
+## Dashboard API curl examples
+
+These examples target the same `/v1` routes used by the Angular dashboard.
+
+```bash
+BASE=http://localhost:6123/v1
+
+curl "$BASE/system/status"
+curl "$BASE/projects"
+curl -X POST "$BASE/projects" \
+  -H 'Content-Type: application/json' \
+  -d '{"key":"default","name":"Default"}'
+
+curl "$BASE/projects/default/environments"
+curl -X POST "$BASE/projects/default/environments" \
+  -H 'Content-Type: application/json' \
+  -d '{"key":"production","name":"Production"}'
+
+curl "$BASE/projects/default/environments/production/flags"
+curl -X POST "$BASE/projects/default/environments/production/flags" \
+  -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: demo-create-checkout' \
+  -d '{"key":"checkout","name":"Checkout","enabled":true,"clientSide":true,"value":{"type":"boolean","default":false},"rules":[]}'
+
+curl "$BASE/projects/default/environments/production/flags/evaluate?flagKey=checkout&userId=user-1"
+curl "$BASE/public/projects/default/environments/production/flags" \
+  -H 'X-Public-Api-Key: dev-public-key'
+```
+
 ## Install (empty DB)
 
 When `database.state` is `db_empty`, call:

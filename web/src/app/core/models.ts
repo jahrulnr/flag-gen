@@ -175,6 +175,28 @@ export interface DashboardBootstrap extends ApiEnvelope {
   };
 }
 
+export interface Role {
+  id?: string;
+  key?: string;
+  name?: string;
+  description?: string;
+  permissions?: string[];
+  systemRole?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface DashboardUser {
+  id?: string;
+  email?: string;
+  name?: string;
+  roleId?: string;
+  roleKey?: string;
+  role?: string;
+  status?: string;
+  createdAt?: string;
+}
+
 export function rowID(row: { ID?: string; id?: string }): string {
   return row.id ?? row.ID ?? '';
 }

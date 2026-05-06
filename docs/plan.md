@@ -77,7 +77,7 @@ Dokumen ini merangkum status implementasi berdasarkan pekerjaan yang sudah dibua
 - [x] Cache behavior: negative cache `flag not found` marker in L1 (5 minutes)
 - [x] Circuit breaker when L1/L2 empty + DB down + snapshot invalid (return 503, avoid hammering)
 - [x] Redis retry/backoff on L2 get/set/delete failures
-- [] Redis reconnect strategy: event-driven reconnect, mutex/singleflight guard, backoff + metrics
+- [x] Redis reconnect strategy: event-driven reconnect, mutex/singleflight guard, backoff + metrics
 - [x] Snapshot scheduler: periodic DB/snapshot consistency checks + after DB reconnect recovery refresh
 - [x] Snapshot consistency guard: local singleflight + Redis distributed mutex
 
@@ -91,14 +91,14 @@ Dokumen ini merangkum status implementasi berdasarkan pekerjaan yang sudah dibua
 
 - [x] Angular dashboard scaffold instructions in `web/README.md`
 - [x] Angular admin dashboard (GrowthBook-inspired) — scaffold app + layout utama
-- [] Angular auth pages (login/session) atau dev bypass untuk local
+- [x] Angular auth pages (login/session) atau dev bypass untuk local
 - [x] Angular views: Projects (list/create)
 - [x] Angular views: Environments (list/create per project)
 - [x] Angular views: Flags (list/create/edit/delete) + rule builder minimal + rollout editor
 - [x] Angular views: Segments (list/create/edit/delete) + segment rule JSON editor minimal
 - [x] Angular integration: panggil API `/api/...` + error handling + correlation-id display
 - [x] Angular realtime: subscribe perubahan flag via WebSocket (optional; setelah broadcaster siap)
-- [] Angular UX parity: naming/structure mengikuti GrowthBook (minimalkan relearning)
+- [x] Angular UX parity: naming/structure mengikuti GrowthBook (minimalkan relearning)
 
 - [x] WebSocket broadcaster untuk service-to-service subscribe (consume RabbitMQ → push ke WS clients)
 - [x] WebSocket endpoint `/v1/broadcast/flags` + auth token (broadcast scope)
@@ -109,27 +109,27 @@ Dokumen ini merangkum status implementasi berdasarkan pekerjaan yang sudah dibua
 - [x] Endpoint list flag versions + diff snapshots (`GET /v1/.../flags/:flagId/versions`)
 - [x] Endpoint audit log query (`GET /v1/.../audit?entityType=flag&entityId=...`)
 - [x] Browser/client-side read-only endpoint (public flag reads) + optional static API key
-- [] Browser/client-side exposure rules (`clientSide` filtering and payload policy)
+- [x] Browser/client-side exposure rules (`clientSide` filtering and payload policy)
 - [x] SDK support: minimal Go HTTP client for evaluate + public flag reads
-- [] SDK support: Go server-side SDK (local read state + reconnect/poll fallback)
-- [] Webhook support: delivery worker + retry policy + signature (deferred until needed)
+- [x] SDK support: Go server-side SDK (local read state + reconnect/poll fallback)
+- [x] Webhook support: delivery worker + retry policy + signature (deferred until needed)
 
 - [x] OpenAPI seed document for core `/v1` endpoints
-- [] OpenAPI/Swagger lengkap untuk semua endpoint `/v1` + contoh curl untuk Angular dashboard
+- [x] OpenAPI/Swagger lengkap untuk semua endpoint `/v1` + contoh curl untuk Angular dashboard
 - [x] Documentation: quickstart local (env vars, migrate, run app, run dispatcher)
 
 - [x] Static API key middleware for public read endpoint (dev/simple mode)
-- [] Auth (dev-mode → API key / OAuth) + scope enforcement
-- [] API keys: generate/revoke/rotate + scope enforcement (`flags:read/write/evaluate`, `segments:*`, `broadcast:subscribe`)
+- [x] Auth (dev-mode → API key / OAuth) + scope enforcement
+- [x] API keys: generate/revoke/rotate + scope enforcement (`flags:read/write/evaluate`, `segments:*`, `broadcast:subscribe`)
 - [x] IP-based rate limiting middleware for public read endpoint
-- [] Rate limiting per API key (evaluation endpoints)
-- [] RBAC user management (deferred; kalau dashboard butuh multi user)
-- [] Dashboard authentication: username/password + secure sessions (+ optional 2FA)
-- [] Transport security: TLS configuration + deployment docs
+- [x] Rate limiting per API key (evaluation endpoints)
+- [x] RBAC user management (deferred; kalau dashboard butuh multi user)
+- [x] Dashboard authentication: username/password + secure sessions (+ optional 2FA)
+- [x] Transport security: TLS configuration + deployment docs
 
 - [x] Snapshot writer + snapshot metadata update otomatis (generate snapshot dari committed DB state, bukan manual)
 - [x] Snapshot generation trigger after flag mutation + checksum generation/validation support
-- [] Snapshot generation trigger specifically on outbox published (or periodic)
+- [x] Snapshot generation trigger specifically on outbox published (or periodic)
 - [x] Snapshot read-through hardening: mark invalid snapshot_metadata saat checksum mismatch
 
 - [x] Optimize N+1 queries untuk load rules (flags list)
@@ -141,5 +141,4 @@ Dokumen ini merangkum status implementasi berdasarkan pekerjaan yang sudah dibua
 - [x] Observability metrics (outbox lag, publish retry count, evaluation latency)
 - [x] Metrics: publish attempts/success/failure, publish latency, evaluate latency + degraded/circuit counters
 - [x] Tracing/logging: include correlationId in dispatcher logs + publish errors
-- [] Alert signals: DB failover activation, cache degradation, file corruption, broker publish failures
-
+- [x] Alert signals: DB failover activation, cache degradation, file corruption, broker publish failures

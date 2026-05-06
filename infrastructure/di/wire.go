@@ -30,6 +30,7 @@ func InitializeApplication() (*ApplicationState, error) {
 		ProvideScopedFlagCache,
 		ProvideAMQPPublisher,
 		ProvideOutboxDispatcher,
+		ProvideWebhookWorker,
 		ProvideSystemService,
 		ProvideApplicationState,
 	)

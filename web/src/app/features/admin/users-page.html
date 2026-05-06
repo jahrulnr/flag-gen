@@ -1,0 +1,100 @@
+<section class="page">
+  <header>
+    <div>
+      <p class="eyebrow">Access control</p>
+      <h1>Users</h1>
+    </div>
+    <div class="page-actions">
+      <app-wiki-button wikiId="lifecycle" />
+      <button type="button" class="btn btn--ghost" (click)="reload()">
+        <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  <app-inline-api-error [message]="error()" [reference]="errorRef()" />
+
+  <form (ngSubmit)="save()" class="form wide">
+    <label class="field">
+      Email
+      <input
+        name="email"
+        type="email"
+        placeholder="name@company.test"
+        [(ngModel)]="form.email"
+        [disabled]="!!form.id"
+        required
+      />
+    </label>
+    <label class="field">
+      Name
+      <input name="name" placeholder="Full name" [(ngModel)]="form.name" required />
+    </label>
+    <label class="field" *ngIf="!form.id">
+      Password
+      <input name="password" type="password" minlength="8" [(ngModel)]="form.password" required />
+    </label>
+    <label class="field">
+      Role
+      <select name="roleId" [(ngModel)]="form.roleId" required>
+        <option value="">Select role</option>
+        <option *ngFor="let role of roles()" [value]="role.id">
+          {{ role.name }} ({{ role.key }})
+        </option>
+      </select>
+    </label>
+    <label class="field">
+      Status
+      <select name="status" [(ngModel)]="form.status">
+        <option value="active">Active</option>
+        <option value="disabled">Disabled</option>
+      </select>
+    </label>
+    <button type="submit" class="btn btn--primary">
+      <i
+        class="fa-solid"
+        [class.fa-pen]="form.id"
+        [class.fa-plus]="!form.id"
+        aria-hidden="true"
+      ></i>
+      {{ form.id ? 'Update user' : 'Create user' }}
+    </button>
+    <button type="button" class="btn btn--ghost" *ngIf="form.id" (click)="cancel()">Cancel</button>
+  </form>
+
+  <div class="list-card" aria-label="Users">
+    <article *ngFor="let user of users()" class="list-row">
+      <div class="list-row__main">
+        <span class="list-row__icon"><i class="fa-solid fa-user" aria-hidden="true"></i></span>
+        <div>
+          <strong>{{ user.name }}</strong>
+          <p class="list-row__meta">
+            <code>{{ user.email }}</code>
+            <span class="badge" [class.badge--disabled]="user.status === 'disabled'">{{
+              user.status
+            }}</span>
+          </p>
+          <p class="role-line">{{ roleLabel(user) }}</p>
+        </div>
+      </div>
+      <div class="row-actions">
+        <button type="button" class="btn btn--ghost" (click)="edit(user)">
+          <i class="fa-solid fa-pen" aria-hidden="true"></i>
+          Edit
+        </button>
+        <button
+          type="button"
+          class="btn btn--icon btn--danger"
+          (click)="disable(user)"
+          [disabled]="user.status === 'disabled'"
+          [attr.aria-label]="'Disable user ' + user.email"
+        >
+          <i class="fa-solid fa-user-slash" aria-hidden="true"></i>
+        </button>
+      </div>
+    </article>
+  </div>
+
+  <app-destructive-confirm-dialog />
+</section>

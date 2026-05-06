@@ -1,0 +1,37 @@
+<main class="login-page">
+  <section class="login-panel" aria-labelledby="login-title">
+    <div class="login-panel__brand">
+      <span class="brand-mark"><i class="fa-solid fa-flag" aria-hidden="true"></i></span>
+      <span>Flag Gen</span>
+    </div>
+
+    <h1 id="login-title">Admin sign in</h1>
+
+    <form (ngSubmit)="submit()" class="login-form">
+      <label>
+        Email
+        <input name="email" type="email" autocomplete="username" [(ngModel)]="email" />
+      </label>
+      <label>
+        Password
+        <input
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          [(ngModel)]="password"
+        />
+      </label>
+
+      <p *ngIf="error" class="login-error" role="alert">{{ error }}</p>
+
+      <button type="submit">
+        <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+        Sign in
+      </button>
+      <button type="button" class="secondary" (click)="signInDev()">
+        <i class="fa-solid fa-code" aria-hidden="true"></i>
+        Dev bypass
+      </button>
+    </form>
+  </section>
+</main>

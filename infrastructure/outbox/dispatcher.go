@@ -30,6 +30,8 @@ type Dispatcher struct {
 
 	exchange string
 	timeout  time.Duration
+
+	afterPublished func(context.Context, entity.OutboxEvent)
 }
 
 func NewDispatcher(workerID string, batch int, interval time.Duration, lockFor time.Duration, exchange string, timeout time.Duration, outboxRepo repository.OutboxRepository, publisher Publisher) *Dispatcher {
@@ -61,6 +63,10 @@ func NewDispatcher(workerID string, batch int, interval time.Duration, lockFor t
 		exchange:   exchange,
 		timeout:    timeout,
 	}
+}
+
+func (d *Dispatcher) SetAfterPublished(fn func(context.Context, entity.OutboxEvent)) {
+	d.afterPublished = fn
 }
 
 func (d *Dispatcher) Run(ctx context.Context) error {
@@ -97,6 +103,9 @@ func (d *Dispatcher) tick(ctx context.Context) error {
 		metrics.Inc("outbox_publish_success_total", 1)
 		metrics.AddLatencySample("outbox_publish", float64(time.Since(t0).Milliseconds()))
 		_ = d.outboxRepo.MarkPublished(ctx, e.ID)
+		if d.afterPublished != nil {
+			d.afterPublished(ctx, e)
+		}
 	}
 	return nil
 }

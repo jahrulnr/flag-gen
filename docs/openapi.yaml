@@ -3,33 +3,479 @@ info:
   title: Flag Gen API
   version: 0.1.0
 servers:
-  - url: http://localhost:8080/v1
+  - url: http://localhost:6123/v1
+tags:
+  - name: system
+  - name: auth
+  - name: projects
+  - name: environments
+  - name: segments
+  - name: flags
+  - name: audit
+  - name: public
+  - name: api-keys
+  - name: users
+  - name: roles
+  - name: broadcast
 paths:
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Dashboard username/password login
+      responses:
+        "200": { description: Session cookie issued }
+        "401": { description: Invalid credentials }
+  /auth/me:
+    get:
+      tags: [auth]
+      summary: Current dashboard session user
+      responses:
+        "200": { description: Current user }
+        "401": { description: Not authenticated }
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Revoke current dashboard session
+      responses:
+        "200": { description: Logged out }
   /system/status:
     get:
+      tags: [system]
       summary: Database and app lifecycle status
+      responses:
+        "200": { description: OK }
+  /system/metrics:
+    get:
+      tags: [system]
+      summary: In-process text metrics
+      responses:
+        "200": { description: Plain text metrics }
   /system/install:
     post:
-      summary: Bootstrap empty database
+      tags: [system]
+      summary: Bootstrap an empty database
+      requestBody:
+        required: true
+        content:
+          application/json:
+            examples:
+              local:
+                value:
+                  admin: { email: admin@local, name: Admin, password: admin }
+                  projectKey: default
+                  environmentKey: production
+      responses:
+        "200": { description: Installed }
+        "409": { description: Database is not empty or not installable }
   /system/migrate:
     post:
-      summary: Apply pending migrations (dev-gated)
+      tags: [system]
+      summary: Apply pending migrations
+      responses:
+        "200": { description: Migrated }
+        "403": { description: Migration endpoint disabled }
+  /security/csrf:
+    get:
+      tags: [system]
+      summary: Issue CSRF contract for /api dashboard routes
+      responses:
+        "200": { description: CSRF token contract }
   /projects:
     get:
+      tags: [projects]
       summary: List projects
+      responses:
+        "200": { description: Project list }
     post:
+      tags: [projects]
       summary: Create project
+      responses:
+        "201": { description: Created }
+  /projects/{projectId}:
+    delete:
+      tags: [projects]
+      summary: Soft-delete project
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+      responses:
+        "204": { description: Deleted }
+  /projects/{projectId}/environments:
+    get:
+      tags: [environments]
+      summary: List environments
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+      responses:
+        "200": { description: Environment list }
+    post:
+      tags: [environments]
+      summary: Create environment
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+      responses:
+        "201": { description: Created }
+  /projects/{projectId}/environments/{environmentKey}:
+    delete:
+      tags: [environments]
+      summary: Soft-delete environment
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+        - $ref: "#/components/parameters/environmentKey"
+      responses:
+        "204": { description: Deleted }
+  /projects/{projectId}/segments:
+    get:
+      tags: [segments]
+      summary: List segments
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+      responses:
+        "200": { description: Segment list }
+    post:
+      tags: [segments]
+      summary: Create segment
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+      responses:
+        "201": { description: Created }
+  /projects/{projectId}/segments/{segmentId}:
+    patch:
+      tags: [segments]
+      summary: Update segment
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+        - name: segmentId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Updated }
+    delete:
+      tags: [segments]
+      summary: Delete segment
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+        - name: segmentId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Deleted }
+  /projects/{projectId}/environments/{environmentKey}/flags:
+    get:
+      tags: [flags]
+      summary: List flags
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+        - $ref: "#/components/parameters/environmentKey"
+      responses:
+        "200": { description: Flag list }
+    post:
+      tags: [flags]
+      summary: Create flag
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+        - $ref: "#/components/parameters/environmentKey"
+        - $ref: "#/components/parameters/idempotencyKey"
+      responses:
+        "201": { description: Created }
+  /projects/{projectId}/environments/{environmentKey}/api-keys:
+    get:
+      tags: [api-keys]
+      summary: List scoped API keys
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+        - $ref: "#/components/parameters/environmentKey"
+      responses:
+        "200": { description: API key list without plaintext tokens }
+    post:
+      tags: [api-keys]
+      summary: Generate scoped API key
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+        - $ref: "#/components/parameters/environmentKey"
+      responses:
+        "201": { description: Created with one-time plaintext token }
+  /projects/{projectId}/environments/{environmentKey}/api-keys/{keyId}:
+    delete:
+      tags: [api-keys]
+      summary: Revoke scoped API key
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+        - $ref: "#/components/parameters/environmentKey"
+        - name: keyId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Revoked }
+  /projects/{projectId}/environments/{environmentKey}/api-keys/{keyId}/rotate:
+    post:
+      tags: [api-keys]
+      summary: Rotate scoped API key secret
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+        - $ref: "#/components/parameters/environmentKey"
+        - name: keyId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Rotated with one-time plaintext token }
   /projects/{projectId}/environments/{environmentKey}/flags/evaluate:
     get:
-      summary: Evaluate single flag (query flagKey, userId)
+      tags: [flags]
+      summary: Evaluate a single flag with query parameters
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+        - $ref: "#/components/parameters/environmentKey"
+        - name: flagKey
+          in: query
+          required: true
+          schema: { type: string }
+        - name: userId
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200": { description: Evaluation result }
+        "503": { description: Cache/DB/snapshot degraded }
     post:
-      summary: Evaluate multiple flags
+      tags: [flags]
+      summary: Evaluate one or more flags
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+        - $ref: "#/components/parameters/environmentKey"
+      responses:
+        "200": { description: Evaluation results }
+        "503": { description: Cache/DB/snapshot degraded }
+  /projects/{projectId}/environments/{environmentKey}/flags/{flagKey}:
+    get:
+      tags: [flags]
+      summary: Get flag by key
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+        - $ref: "#/components/parameters/environmentKey"
+        - $ref: "#/components/parameters/flagKey"
+      responses:
+        "200": { description: Flag detail }
+    patch:
+      tags: [flags]
+      summary: Update flag
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+        - $ref: "#/components/parameters/environmentKey"
+        - $ref: "#/components/parameters/flagKey"
+        - $ref: "#/components/parameters/idempotencyKey"
+      responses:
+        "200": { description: Updated }
+    delete:
+      tags: [flags]
+      summary: Soft-delete flag
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+        - $ref: "#/components/parameters/environmentKey"
+        - $ref: "#/components/parameters/flagKey"
+        - $ref: "#/components/parameters/idempotencyKey"
+      responses:
+        "204": { description: Deleted }
+  /projects/{projectId}/environments/{environmentKey}/flags/{flagKey}/versions:
+    get:
+      tags: [flags]
+      summary: List flag version history
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+        - $ref: "#/components/parameters/environmentKey"
+        - $ref: "#/components/parameters/flagKey"
+      responses:
+        "200": { description: Version list }
+  /projects/{projectId}/environments/{environmentKey}/flags/{flagKey}/versions/diff:
+    get:
+      tags: [flags]
+      summary: Diff two flag versions
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+        - $ref: "#/components/parameters/environmentKey"
+        - $ref: "#/components/parameters/flagKey"
+        - name: from
+          in: query
+          required: true
+          schema: { type: integer }
+        - name: to
+          in: query
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Diff }
+  /projects/{projectId}/environments/{environmentKey}/flags/{flagKey}/rollback:
+    post:
+      tags: [flags]
+      summary: Roll back a flag to a previous version
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+        - $ref: "#/components/parameters/environmentKey"
+        - $ref: "#/components/parameters/flagKey"
+        - $ref: "#/components/parameters/idempotencyKey"
+      responses:
+        "200": { description: Rolled back }
+  /projects/{projectId}/audit:
+    get:
+      tags: [audit]
+      summary: Query audit log
+      parameters:
+        - $ref: "#/components/parameters/projectId"
+        - name: entityType
+          in: query
+          required: false
+          schema: { type: string }
+        - name: entityId
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200": { description: Audit entries }
+  /users:
+    get:
+      tags: [users]
+      summary: List dashboard users
+      responses:
+        "200": { description: User list }
+    post:
+      tags: [users]
+      summary: Create dashboard user
+      responses:
+        "201": { description: Created }
+  /users/{userId}:
+    get:
+      tags: [users]
+      summary: Get dashboard user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: User }
+    patch:
+      tags: [users]
+      summary: Update dashboard user role/status
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Updated }
+    delete:
+      tags: [users]
+      summary: Disable dashboard user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Disabled }
+  /roles:
+    get:
+      tags: [roles]
+      summary: List dashboard roles
+      responses:
+        "200": { description: Role list }
+    post:
+      tags: [roles]
+      summary: Create dashboard role
+      responses:
+        "201": { description: Created }
+  /roles/{roleId}:
+    get:
+      tags: [roles]
+      summary: Get dashboard role
+      parameters:
+        - name: roleId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Role }
+    patch:
+      tags: [roles]
+      summary: Update dashboard role permissions
+      parameters:
+        - name: roleId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Updated }
+    delete:
+      tags: [roles]
+      summary: Delete custom dashboard role
+      parameters:
+        - name: roleId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Deleted }
+        "409": { description: System role or assigned role cannot be deleted }
   /public/projects/{projectId}/environments/{environmentKey}/flags:
     get:
-      summary: Public read-only flag list
+      tags: [public]
+      summary: Browser-safe read-only flag list
+      description: Returns only flags marked clientSide, with key/enabled/value/version payload.
       parameters:
+        - $ref: "#/components/parameters/projectId"
+        - $ref: "#/components/parameters/environmentKey"
         - in: header
           name: X-Public-Api-Key
-          schema:
-            type: string
+          schema: { type: string }
           required: false
+      responses:
+        "200":
+          description: Client-side flag list
+  /broadcast/flags:
+    get:
+      tags: [broadcast]
+      summary: WebSocket scoped flag broadcast stream
+      parameters:
+        - $ref: "#/components/parameters/projectIdQuery"
+        - $ref: "#/components/parameters/environmentKeyQuery"
+        - name: token
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "101": { description: WebSocket upgrade }
+components:
+  parameters:
+    projectId:
+      name: projectId
+      in: path
+      required: true
+      schema: { type: string }
+    environmentKey:
+      name: environmentKey
+      in: path
+      required: true
+      schema: { type: string }
+    flagKey:
+      name: flagKey
+      in: path
+      required: true
+      schema: { type: string }
+    idempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string }
+    projectIdQuery:
+      name: projectId
+      in: query
+      required: true
+      schema: { type: string }
+    environmentKeyQuery:
+      name: environmentKey
+      in: query
+      required: true
+      schema: { type: string }

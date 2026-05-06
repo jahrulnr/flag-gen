@@ -9,6 +9,7 @@ import (
 	"flag-gen/infrastructure/config"
 	"flag-gen/infrastructure/outbox"
 	mysqlrepo "flag-gen/infrastructure/repository/mysql"
+	"flag-gen/infrastructure/webhook"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -34,6 +35,7 @@ type ApplicationState struct {
 
 	AMQPPublisher    *broker.AMQPPublisher
 	OutboxDispatcher *outbox.Dispatcher
+	WebhookWorker    *webhook.Worker
 
 	System *usecase.SystemService
 

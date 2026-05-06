@@ -5,7 +5,7 @@ const (
 	AppVersion = "0.1.0"
 
 	// SchemaTargetVersion is the latest migration version shipped with this binary.
-	SchemaTargetVersion int64 = 202605050003
+	SchemaTargetVersion int64 = 202605070004
 
 	// SchemaMinCompatibleVersion is the oldest schema this binary can safely run against.
 	SchemaMinCompatibleVersion int64 = 202604280001
