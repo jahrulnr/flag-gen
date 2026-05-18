@@ -146,6 +146,18 @@ Unleash adalah platform feature flag open-source dengan opsi enterprise.
 - Test kedua kondisi: flag aktif dan flag nonaktif.
 - Tambahkan monitoring untuk evaluasi, fallback, dan error.
 
+## Integrasi dengan flag-gen
+
+| Topik | Dokumen |
+|-------|---------|
+| **Indeks dokumentasi** | [../../README.md](../../README.md) |
+| **Cara kerja runtime** (definitions vs evaluate, broadcast) | [../how-it-works.md](../how-it-works.md) |
+| **SDK Go (`flagclient`)** | [../sdk/sdk-flagclient_id.md](../sdk/sdk-flagclient_id.md) |
+| Quickstart lokal | [../quickstart.md](../quickstart.md) |
+| Semantik evaluate (`reason`, rules, rollout) | [../../assessment/evaluation-semantics.md](../../assessment/evaluation-semantics.md) |
+| Kontrak HTTP/WebSocket | [../../assessment/api-contract.md](../../assessment/api-contract.md) |
+| Contoh kode | [../../../examples/](../../../examples/) |
+
 ## Kesimpulan
 
 Feature flag membantu tim merilis fitur dengan lebih aman, terutama untuk gradual rollout, rollback cepat, dan koordinasi antar service. Untuk sistem internal seperti flag-gen, prioritas awal sebaiknya fokus pada core flag management, evaluasi deterministik, audit trail, WebSocket synchronization, dan fallback availability sebelum masuk ke experimentation atau fitur enterprise.

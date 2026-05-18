@@ -1,5 +1,7 @@
 # Flag Gen — Quickstart (local)
 
+Documentation: [../README.md](../README.md) · runtime: [how-it-works.md](how-it-works.md)
+
 ## Prerequisites
 
 - Go 1.26+
@@ -18,9 +20,11 @@ If you use the shared **`/apps/services/compose.yml`** stack: service **`databas
 | `REDIS_ADDR` | Redis address (optional) |
 | `RABBITMQ_AMQP_URL` | AMQP URL for outbox publisher / broadcast consumer |
 | `RABBITMQ_EXCHANGE` | Topic exchange name (default `flaggen.events`) |
-| `OUTBOX_WORKER_ENABLED` | `true` to run outbox dispatcher in-process |
-| `BROADCAST_CONSUMER_ENABLED` | `true` to consume `flag.*` and fan out to WebSocket hub |
-| `BROADCAST_DEV_TOKEN` | Shared token for `/v1/broadcast/flags` query `token=` |
+| `OUTBOX_WORKER_ENABLED` | `true` to run outbox dispatcher in-process (publishes flag changes to RabbitMQ) |
+| `BROADCAST_CONSUMER_ENABLED` | `true` to consume `flag.*` from RabbitMQ and fan out to WebSocket hub |
+| `BROADCAST_DEV_TOKEN` | Shared token for `/v1/broadcast/flags` query `token=` (dev local) |
+
+For live WebSocket updates after dashboard edits, set **`OUTBOX_WORKER_ENABLED=true`** and **`BROADCAST_CONSUMER_ENABLED=true`** (RabbitMQ on `RABBITMQ_AMQP_URL` must be running), then restart the server.
 | `ALLOW_DEV_MIGRATE` | Allow `POST /v1/system/migrate` outside dev when `true` |
 | `PUBLIC_READ_API_KEY` | Required `X-Public-Api-Key` for `/v1/public/...` when set |
 | `SNAPSHOT_DIR` | Snapshot file directory |
@@ -85,7 +89,7 @@ curl "$BASE/public/projects/default/environments/production/flags" \
 
 When `database.state` is `db_empty`, call:
 
-`POST /v1/system/install` with admin + optional seed (see `docs/assessment/api-contract.md`).
+`POST /v1/system/install` with admin + optional seed (see [../assessment/api-contract.md](../assessment/api-contract.md)).
 
 ## WebSocket broadcast (dev)
 

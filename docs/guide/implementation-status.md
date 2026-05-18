@@ -137,7 +137,7 @@ Dokumen ini merangkum status implementasi berdasarkan pekerjaan yang sudah dibua
 - [x] Cache invalidation: invalidate `ScopedFlagCache` by scope after local flag mutations
 - [x] Cache invalidation: invalidate `ScopedFlagCache` by scope on outbox events
 
-- [x] Observability metrics documentation (`docs/metrics.md`)
+- [x] Observability metrics documentation (`docs/guide/metrics.md`)
 - [x] Observability metrics (outbox lag, publish retry count, evaluation latency)
 - [x] Metrics: publish attempts/success/failure, publish latency, evaluate latency + degraded/circuit counters
 - [x] Tracing/logging: include correlationId in dispatcher logs + publish errors

@@ -161,6 +161,18 @@ Unleash is an open-source feature flag management platform designed for enterpri
 - Test both flag states in development
 - Document flag purposes and ownership
 
+## flag-gen integration
+
+| Topic | Document |
+|-------|----------|
+| Documentation index | [../../README.md](../../README.md) |
+| Run locally / WebSocket | [../quickstart.md](../quickstart.md) |
+| Runtime behavior | [../how-it-works.md](../how-it-works.md) |
+| **Go SDK (`flagclient`)** | [../sdk/sdk-flagclient.md](../sdk/sdk-flagclient.md) |
+| Evaluation semantics | [../../assessment/evaluation-semantics.md](../../assessment/evaluation-semantics.md) |
+| HTTP/WebSocket API | [../../assessment/api-contract.md](../../assessment/api-contract.md) |
+| Code examples | [../../../examples/](../../../examples/) |
+
 ## Conclusion
 
 Feature flags are a powerful tool for modern software development. Tools like GrowthBook and Unleash provide different approaches to feature flag management, each with their own strengths. Choose based on your team's size, technical requirements, and budget constraints.
