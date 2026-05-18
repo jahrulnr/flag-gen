@@ -79,11 +79,13 @@ func RegisterRoutes(group *gin.RouterGroup, app *di.ApplicationState, csrf *midd
 	public.Use(middleware.StaticAPIKey("X-Public-Api-Key", app.Config.PublicReadAPIKey))
 	publicHandler := handler.NewPublicFlagsHandler(listFlags, usecase.NewEvaluateFlagsUsecase(app.ScopedFlags))
 	public.GET("/projects/:projectId/environments/:environmentKey/flags", publicHandler.List)
+	public.POST("/projects/:projectId/environments/:environmentKey/flags/evaluate", publicHandler.EvaluatePOST)
 	public.GET("/projects/:projectId/environments/:environmentKey/flags/:flagKey/evaluate", publicHandler.Evaluate)
 	client := group.Group("/client")
 	client.Use(middleware.RateLimit(20, 60))
 	client.Use(middleware.StaticAPIKey("X-Public-Api-Key", app.Config.PublicReadAPIKey))
 	client.GET("/projects/:projectId/environments/:environmentKey/flags", publicHandler.List)
+	client.POST("/projects/:projectId/environments/:environmentKey/flags/evaluate", publicHandler.EvaluatePOST)
 	client.GET("/projects/:projectId/environments/:environmentKey/flags/:flagKey/evaluate", publicHandler.Evaluate)
 
 	apiKeysHandler := handler.NewAPIKeysHandler(app.MySQL.SQL())

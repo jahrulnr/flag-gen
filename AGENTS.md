@@ -20,7 +20,7 @@ Before changing code, route yourself to the relevant skill in `.agents/skills/` 
 - Gin server setup, middleware, CORS/security headers, request limits, or graceful shutdown: read `go-gin-service-basics/SKILL.md`.
 - Returning, wrapping, translating, or mapping errors across handlers/usecases/infra: read `app-error-handling/SKILL.md`.
 - Flag evaluation rules, rollout bucketing, evaluation metadata, not-found/degraded semantics: read `evaluator-semantics/SKILL.md`.
-- Feature flag product guidance, naming, ownership, rollout/rollback, cleanup, or docs/wiki work: read `feature-flag-wiki-best-practices/SKILL.md`.
+- Feature flag product guidance, naming, ownership, rollout/rollback, cleanup, or docs/guide/concepts work: read `feature-flag-wiki-best-practices/SKILL.md`.
 - Cache refill, snapshot fallback, degraded TTL, snapshot validation, or circuit breaker behavior: read `cache-snapshot-fallback/SKILL.md`, `redis-locks-and-singleflight/SKILL.md`, and `observability-and-correlation/SKILL.md`.
 - Redis locks, local singleflight, schedulers, cleanup jobs, migrations/install guards, or cross-replica concurrency: read `redis-locks-and-singleflight/SKILL.md`.
 - DB lifecycle status/install/migrate endpoints, schema versioning, or advisory-lock flows: read `db-lifecycle-install-migrate/SKILL.md`, `flag-gen-api-contract-implementation/SKILL.md`, and `app-error-handling/SKILL.md`.

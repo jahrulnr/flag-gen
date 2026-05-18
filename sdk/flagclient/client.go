@@ -2,7 +2,6 @@
 package flagclient
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -16,6 +15,8 @@ type Client struct {
 	HTTPClient *http.Client
 	PublicKey  string
 	RuntimeKey string
+	// BroadcastDevToken is sent as query token= on WebSocket /broadcast/flags (local dev).
+	BroadcastDevToken string
 }
 
 func New(baseURL string) *Client {
@@ -25,35 +26,6 @@ func New(baseURL string) *Client {
 			Timeout: 15 * time.Second,
 		},
 	}
-}
-
-// Evaluate calls POST /projects/{pid}/environments/{ek}/flags/evaluate with a single flag key.
-func (c *Client) Evaluate(ctx context.Context, projectID, environmentKey, userID, flagKey string) (map[string]any, error) {
-	body := map[string]any{
-		"context": map[string]any{"userId": userID},
-		"flags":   []string{flagKey},
-	}
-	b, _ := json.Marshal(body)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		fmt.Sprintf("%s/projects/%s/environments/%s/flags/evaluate", c.BaseURL, projectID, environmentKey),
-		bytes.NewReader(b))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := c.HTTPClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("evaluate: status %d", resp.StatusCode)
-	}
-	var out map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 // ListPublicFlags calls GET /public/projects/{pid}/environments/{ek}/flags when PUBLIC_READ_API_KEY is configured server-side.

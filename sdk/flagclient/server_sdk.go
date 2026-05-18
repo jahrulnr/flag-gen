@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -98,6 +100,7 @@ func (s *ServerSDK) StartWebSocket(ctx context.Context) {
 		backoff := time.Second
 		for {
 			if err := s.runWebSocket(ctx); err != nil {
+				log.Printf("flagclient: websocket: %v", err)
 				select {
 				case <-ctx.Done():
 					return
@@ -114,7 +117,7 @@ func (s *ServerSDK) StartWebSocket(ctx context.Context) {
 }
 
 func (s *ServerSDK) runWebSocket(ctx context.Context) error {
-	wsURL, err := broadcastURL(s.client.BaseURL, s.projectID, s.environmentKey)
+	wsURL, err := broadcastURL(s.client.BaseURL, s.projectID, s.environmentKey, s.client.BroadcastDevToken)
 	if err != nil {
 		return err
 	}
@@ -122,11 +125,20 @@ func (s *ServerSDK) runWebSocket(ctx context.Context) error {
 	if s.client.RuntimeKey != "" {
 		header.Set("Authorization", "Bearer "+s.client.RuntimeKey)
 	}
-	conn, _, err := websocket.DefaultDialer.DialContext(ctx, wsURL, header)
+	conn, resp, err := websocket.DefaultDialer.DialContext(ctx, wsURL, header)
 	if err != nil {
+		if resp != nil {
+			body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+			_ = resp.Body.Close()
+			if resp.StatusCode == http.StatusUnauthorized {
+				return fmt.Errorf("websocket unauthorized (check BROADCAST_DEV_TOKEN query token matches flag-gen): %s", strings.TrimSpace(string(body)))
+			}
+			return fmt.Errorf("websocket handshake %s: %s", resp.Status, strings.TrimSpace(string(body)))
+		}
 		return err
 	}
 	defer conn.Close()
+	log.Printf("flagclient: websocket connected %s", wsURL)
 
 	for {
 		_, body, err := conn.ReadMessage()
@@ -137,7 +149,7 @@ func (s *ServerSDK) runWebSocket(ctx context.Context) error {
 	}
 }
 
-func broadcastURL(baseURL, projectID, environmentKey string) (string, error) {
+func broadcastURL(baseURL, projectID, environmentKey, devToken string) (string, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return "", err
@@ -152,6 +164,9 @@ func broadcastURL(baseURL, projectID, environmentKey string) (string, error) {
 	q := u.Query()
 	q.Set("projectId", projectID)
 	q.Set("environmentKey", environmentKey)
+	if devToken != "" {
+		q.Set("token", devToken)
+	}
 	u.RawQuery = q.Encode()
 	return u.String(), nil
 }
@@ -226,6 +241,17 @@ func flagFromBroadcast(body []byte) (Flag, bool) {
 	f.Value.Default = msg.Value.Default
 	f.Version = msg.Version
 	return f, true
+}
+
+// Snapshot returns a copy of flags currently held in local cache (WebSocket / HTTP refresh).
+func (s *ServerSDK) Snapshot() []Flag {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]Flag, 0, len(s.flags))
+	for _, f := range s.flags {
+		out = append(out, f)
+	}
+	return out
 }
 
 func (s *ServerSDK) Variation(flagKey string, fallback any) any {

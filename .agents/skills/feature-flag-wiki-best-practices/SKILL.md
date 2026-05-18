@@ -1,15 +1,14 @@
 ---
 name: feature-flag-wiki-best-practices
-description: Applies feature flag best practices from docs/wiki/feature-flags*.md. Use when the user asks what a feature flag is, when to use feature flags vs configuration, naming/ownership/cleanup guidance, rollout/rollback strategy, or when writing/triaging docs about feature flags.
+description: Applies feature flag best practices from docs/guide/concepts/feature-flags*.md. Use when the user asks what a feature flag is, when to use feature flags vs configuration, naming/ownership/cleanup guidance, rollout/rollback strategy, or when writing/triaging docs about feature flags.
 ---
 
 # Feature Flag Wiki Best Practices
 
 ## Source of truth
 
-- `docs/wiki/feature-flags.md`
-- `docs/wiki/feature-flags_id.md`
-- `docs/wiki/feature-flags-sequence.puml`
+- `docs/guide/concepts/feature-flags.md`
+- `docs/guide/concepts/feature-flags_id.md`
 
 ## Core guidance to apply
 

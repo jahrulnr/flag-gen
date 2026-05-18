@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"time"
 
 	"flag-gen/application/usecase"
 	"flag-gen/delivery/http/response"
@@ -71,6 +72,66 @@ func (h *PublicFlagsHandler) Evaluate(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"result":        mapEvaluationResult(res),
+		"timestamp":     time.Now().UTC().Format(time.RFC3339Nano),
+		"correlationId": response.CorrelationID(c),
+	})
+}
+
+type publicEvaluateRequest struct {
+	Context struct {
+		UserID     string         `json:"userId"`
+		Attributes map[string]any `json:"attributes"`
+	} `json:"context"`
+	Flags []string `json:"flags"`
+}
+
+// EvaluatePOST supports POST /client/.../flags/evaluate with attributes (clientSide flags only).
+func (h *PublicFlagsHandler) EvaluatePOST(c *gin.Context) {
+	scope := valueobject.Scope{
+		ProjectID:      c.Param("projectId"),
+		EnvironmentKey: c.Param("environmentKey"),
+	}
+	var req publicEvaluateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.AbortError(c, http.StatusBadRequest, "bad_request", "invalid json body", nil, time.Now().UTC().Format(time.RFC3339Nano))
+		return
+	}
+	if len(req.Flags) == 0 {
+		response.AbortError(c, http.StatusBadRequest, "bad_request", "flags array is required", nil, time.Now().UTC().Format(time.RFC3339Nano))
+		return
+	}
+
+	flags, _, err := h.list.Execute(c.Request.Context(), scope, "", 500, 0)
+	if err != nil {
+		response.AbortErr(c, err)
+		return
+	}
+	clientKeys := make(map[string]struct{}, len(flags))
+	for _, f := range flags {
+		if f.ClientSide {
+			clientKeys[f.Key] = struct{}{}
+		}
+	}
+	allowed := make([]string, 0, len(req.Flags))
+	for _, key := range req.Flags {
+		if _, ok := clientKeys[key]; ok {
+			allowed = append(allowed, key)
+		}
+	}
+	if len(allowed) == 0 {
+		response.AbortError(c, http.StatusNotFound, "flag_not_found", "no clientSide flags matched", nil, time.Now().UTC().Format(time.RFC3339Nano))
+		return
+	}
+
+	evalCtx := valueobject.EvaluationContext{UserID: req.Context.UserID, Attributes: req.Context.Attributes}
+	out, err := h.eval.Execute(c.Request.Context(), scope, evalCtx, allowed)
+	if err != nil {
+		response.AbortErr(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"results":       mapEvaluationResults(out),
+		"timestamp":     time.Now().UTC().Format(time.RFC3339Nano),
 		"correlationId": response.CorrelationID(c),
 	})
 }
