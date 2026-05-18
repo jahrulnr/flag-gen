@@ -101,6 +101,9 @@ func dashboardHasPermission(perms []string, needed string) bool {
 		if p == "*" || p == needed {
 			return true
 		}
+		if p == "admin:*" {
+			return true
+		}
 		if strings.HasSuffix(p, ":*") && strings.HasPrefix(needed, strings.TrimSuffix(p, "*")) {
 			return true
 		}

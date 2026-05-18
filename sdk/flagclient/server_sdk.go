@@ -5,18 +5,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 type Flag struct {
-	Key        string `json:"Key"`
-	Enabled    bool   `json:"Enabled"`
-	ClientSide bool   `json:"ClientSide"`
+	Key        string `json:"key"`
+	Enabled    bool   `json:"enabled"`
+	ClientSide bool   `json:"clientSide"`
 	Value      struct {
-		Default any `json:"Default"`
-	} `json:"Value"`
-	Version int `json:"Version"`
+		Default any `json:"default"`
+	} `json:"value"`
+	Version int `json:"version"`
 }
 
 type ServerSDK struct {
@@ -84,6 +88,144 @@ func (s *ServerSDK) StartPolling(ctx context.Context) {
 			}
 		}
 	}()
+}
+
+func (s *ServerSDK) StartWebSocket(ctx context.Context) {
+	if s == nil || s.client == nil {
+		return
+	}
+	go func() {
+		backoff := time.Second
+		for {
+			if err := s.runWebSocket(ctx); err != nil {
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(backoff):
+				}
+				if backoff < 30*time.Second {
+					backoff *= 2
+				}
+				continue
+			}
+			backoff = time.Second
+		}
+	}()
+}
+
+func (s *ServerSDK) runWebSocket(ctx context.Context) error {
+	wsURL, err := broadcastURL(s.client.BaseURL, s.projectID, s.environmentKey)
+	if err != nil {
+		return err
+	}
+	header := http.Header{}
+	if s.client.RuntimeKey != "" {
+		header.Set("Authorization", "Bearer "+s.client.RuntimeKey)
+	}
+	conn, _, err := websocket.DefaultDialer.DialContext(ctx, wsURL, header)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	for {
+		_, body, err := conn.ReadMessage()
+		if err != nil {
+			return err
+		}
+		s.applyBroadcast(body)
+	}
+}
+
+func broadcastURL(baseURL, projectID, environmentKey string) (string, error) {
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		return "", err
+	}
+	switch u.Scheme {
+	case "https":
+		u.Scheme = "wss"
+	default:
+		u.Scheme = "ws"
+	}
+	u.Path = strings.TrimRight(u.Path, "/") + "/broadcast/flags"
+	q := u.Query()
+	q.Set("projectId", projectID)
+	q.Set("environmentKey", environmentKey)
+	u.RawQuery = q.Encode()
+	return u.String(), nil
+}
+
+func (s *ServerSDK) applyBroadcast(body []byte) {
+	var msg map[string]json.RawMessage
+	if err := json.Unmarshal(body, &msg); err != nil {
+		return
+	}
+	var typ string
+	_ = json.Unmarshal(msg["type"], &typ)
+	switch typ {
+	case "flags.snapshot":
+		var snap struct {
+			Flags []Flag `json:"flags"`
+		}
+		if err := json.Unmarshal(body, &snap); err != nil {
+			return
+		}
+		next := make(map[string]Flag, len(snap.Flags))
+		for _, f := range snap.Flags {
+			next[f.Key] = f
+		}
+		s.mu.Lock()
+		s.flags = next
+		s.mu.Unlock()
+	case "flag.created", "flag.updated":
+		f, ok := flagFromBroadcast(body)
+		if !ok {
+			return
+		}
+		s.mu.Lock()
+		cur, exists := s.flags[f.Key]
+		if !exists || f.Version >= cur.Version {
+			s.flags[f.Key] = f
+		}
+		s.mu.Unlock()
+	case "flag.deleted":
+		var del struct {
+			FlagKey string `json:"flagKey"`
+			Version int    `json:"version"`
+		}
+		if err := json.Unmarshal(body, &del); err != nil || del.FlagKey == "" {
+			return
+		}
+		s.mu.Lock()
+		cur, exists := s.flags[del.FlagKey]
+		if !exists || del.Version >= cur.Version {
+			delete(s.flags, del.FlagKey)
+		}
+		s.mu.Unlock()
+	}
+}
+
+func flagFromBroadcast(body []byte) (Flag, bool) {
+	var msg struct {
+		FlagKey    string `json:"flagKey"`
+		Enabled    bool   `json:"enabled"`
+		ClientSide bool   `json:"clientSide"`
+		Value      struct {
+			Default any `json:"default"`
+		} `json:"value"`
+		Version int `json:"version"`
+	}
+	if err := json.Unmarshal(body, &msg); err != nil || msg.FlagKey == "" {
+		return Flag{}, false
+	}
+	var f Flag
+	f.Key = msg.FlagKey
+	f.Enabled = msg.Enabled
+	f.ClientSide = msg.ClientSide
+	f.Value.Default = msg.Value.Default
+	f.Version = msg.Version
+	return f, true
 }
 
 func (s *ServerSDK) Variation(flagKey string, fallback any) any {

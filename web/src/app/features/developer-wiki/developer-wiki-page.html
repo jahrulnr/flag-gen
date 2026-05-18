@@ -1,0 +1,63 @@
+<section class="page developer-wiki">
+  <header>
+    <div>
+      <p class="eyebrow">Integration guide</p>
+      <h1>Developer Wiki</h1>
+    </div>
+  </header>
+
+  <div class="guide-tabs" role="tablist" aria-label="SDK guide type">
+    <button
+      *ngFor="let guide of guides"
+      type="button"
+      role="tab"
+      class="guide-tab"
+      [class.is-active]="active() === guide.id"
+      [attr.aria-selected]="active() === guide.id"
+      (click)="active.set(guide.id)"
+    >
+      <i [class]="guide.icon" aria-hidden="true"></i>
+      <span>{{ guide.label }}</span>
+    </button>
+  </div>
+
+  <section class="guide-layout" aria-label="Selected integration guide">
+    <div class="guide-main">
+      <p class="eyebrow">{{ activeGuide().label }}</p>
+      <h2>{{ activeGuide().summary }}</h2>
+      <ol>
+        <li *ngFor="let step of activeGuide().steps">{{ step }}</li>
+      </ol>
+    </div>
+
+    <div class="guide-code">
+      <header>
+        <span>Example</span>
+        <i class="fa-solid fa-code" aria-hidden="true"></i>
+      </header>
+      <pre><code>{{ activeGuide().code }}</code></pre>
+    </div>
+  </section>
+
+  <section class="guide-reference" aria-label="Endpoint reference">
+    <h2>Endpoint Reference</h2>
+    <div class="reference-grid">
+      <article>
+        <strong>Browser-safe list</strong>
+        <code>GET /v1/client/projects/:projectId/environments/:environmentKey/flags</code>
+      </article>
+      <article>
+        <strong>Browser-safe evaluate</strong>
+        <code>GET /v1/client/projects/:projectId/environments/:environmentKey/flags/:flagKey/evaluate?userId=...</code>
+      </article>
+      <article>
+        <strong>Server evaluate</strong>
+        <code>POST /v1/projects/:projectId/environments/:environmentKey/flags/evaluate</code>
+      </article>
+      <article>
+        <strong>Backend broadcast</strong>
+        <code>GET /v1/broadcast/flags?projectId=...&amp;environmentKey=...</code>
+      </article>
+    </div>
+  </section>
+</section>

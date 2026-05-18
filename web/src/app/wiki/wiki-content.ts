@@ -1,4 +1,12 @@
-export type WikiId = 'lifecycle' | 'projects' | 'environments' | 'segments' | 'flags' | 'flag-history' | 'audit';
+export type WikiId =
+  | 'lifecycle'
+  | 'projects'
+  | 'environments'
+  | 'segments'
+  | 'flags'
+  | 'flag-history'
+  | 'audit'
+  | 'developer-wiki';
 
 export interface WikiSection {
   title: string;
@@ -184,6 +192,30 @@ export const WIKI_CONTENT: Record<WikiId, WikiContent> = {
         bullets: [
           'Correlation IDs help connect API calls, logs, and user actions.',
           'If results are empty, confirm you are using the project UUID, not the project key.',
+        ],
+      },
+    ],
+  },
+  'developer-wiki': {
+    id: 'developer-wiki',
+    eyebrow: 'SDK integration',
+    title: 'How to choose an integration path',
+    summary: 'Use browser-safe HTTP endpoints for frontend apps and WebSocket-backed local state for backend services.',
+    sections: [
+      {
+        title: 'Frontend apps',
+        bullets: [
+          'Use /client endpoints and expose only flags marked client-side.',
+          'Send public API keys with X-Public-Api-Key when the deployment requires one.',
+          'Never put credentials or private configuration inside flag values.',
+        ],
+      },
+      {
+        title: 'Backend services',
+        bullets: [
+          'Use scoped API keys with flags:evaluate or broadcast:subscribe permissions.',
+          'Subscribe to WebSocket broadcasts for local state and use HTTP evaluation as fallback.',
+          'Apply updates by version and ignore stale events.',
         ],
       },
     ],

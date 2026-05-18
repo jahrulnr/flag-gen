@@ -15,6 +15,7 @@ type Client struct {
 	BaseURL    string
 	HTTPClient *http.Client
 	PublicKey  string
+	RuntimeKey string
 }
 
 func New(baseURL string) *Client {

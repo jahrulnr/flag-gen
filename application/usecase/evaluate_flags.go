@@ -2,6 +2,9 @@ package usecase
 
 import (
 	"context"
+	"fmt"
+	"reflect"
+	"sort"
 
 	"flag-gen/domain/entity"
 	"flag-gen/domain/valueobject"
@@ -25,13 +28,13 @@ func (u *EvaluateFlagsUsecase) Execute(ctx context.Context, scope valueobject.Sc
 		return nil, apperror.NewValidationError(apperror.ValidationError, "missing flags", nil)
 	}
 
-	flags, err := u.scopedFlags.Get(ctx, scope)
+	scoped, err := u.scopedFlags.GetWithSource(ctx, scope)
 	if err != nil {
 		return nil, err
 	}
 
-	byKey := make(map[string]entity.Flag, len(flags))
-	for _, f := range flags {
+	byKey := make(map[string]entity.Flag, len(scoped.Flags))
+	for _, f := range scoped.Flags {
 		byKey[f.Key] = f
 	}
 
@@ -43,7 +46,7 @@ func (u *EvaluateFlagsUsecase) Execute(ctx context.Context, scope valueobject.Sc
 				Value:   false,
 				Version: 0,
 				Reason:  valueobject.ReasonNotFound,
-				Source:  valueobject.SourceCache,
+				Source:  valueobject.SourceCacheL1,
 			}
 			continue
 		}
@@ -55,16 +58,41 @@ func (u *EvaluateFlagsUsecase) Execute(ctx context.Context, scope valueobject.Sc
 				Value:   false,
 				Version: 0,
 				Reason:  valueobject.ReasonNotFound,
-				Source:  valueobject.SourceCache,
+				Source:  scoped.Source,
 			}
 			continue
 		}
-		out[k] = evaluateOne(scope, evalCtx, f)
+		out[k] = evaluateOne(scope, evalCtx, f, scoped.Source)
 	}
 	return out, nil
 }
 
-func evaluateOne(scope valueobject.Scope, evalCtx valueobject.EvaluationContext, f entity.Flag) valueobject.EvaluationResult {
+func (u *EvaluateFlagsUsecase) ExecuteClientSideSingle(ctx context.Context, scope valueobject.Scope, evalCtx valueobject.EvaluationContext, flagKey string) (valueobject.EvaluationResult, error) {
+	if flagKey == "" {
+		return valueobject.EvaluationResult{}, apperror.NewValidationError(apperror.ValidationError, "missing flag", nil)
+	}
+	results, err := u.Execute(ctx, scope, evalCtx, []string{flagKey})
+	if err != nil {
+		return valueobject.EvaluationResult{}, err
+	}
+	res := results[flagKey]
+	if res.Reason == valueobject.ReasonNotFound {
+		return res, apperror.NewNotFoundError("Flag", nil)
+	}
+
+	scoped, err := u.scopedFlags.GetWithSource(ctx, scope)
+	if err != nil {
+		return valueobject.EvaluationResult{}, err
+	}
+	for _, f := range scoped.Flags {
+		if f.Key == flagKey && f.ClientSide {
+			return res, nil
+		}
+	}
+	return res, apperror.NewNotFoundError("Flag", nil)
+}
+
+func evaluateOne(scope valueobject.Scope, evalCtx valueobject.EvaluationContext, f entity.Flag, source valueobject.EvaluationSource) valueobject.EvaluationResult {
 	// Disabled flags always serve their default value.
 	if !f.Enabled {
 		return valueobject.EvaluationResult{
@@ -72,30 +100,19 @@ func evaluateOne(scope valueobject.Scope, evalCtx valueobject.EvaluationContext,
 			Value:   f.Value.Default,
 			Version: f.Version,
 			Reason:  valueobject.ReasonDisabled,
-			Source:  valueobject.SourceCache,
-		}
-	}
-
-	// Percentage rollout gate (MVP semantics).
-	if f.Rollout != nil && f.Rollout.Percentage > 0 {
-		sticky := evalCtx.UserID
-		if f.Rollout.Stickiness != "" && f.Rollout.Stickiness != "userId" {
-			// For MVP we only support userId stickiness.
-			sticky = evalCtx.UserID
-		}
-		if !valueobject.BucketMatch(scope.ProjectID, scope.EnvironmentKey, f.Key, sticky, f.Rollout.Percentage) {
-			return valueobject.EvaluationResult{
-				FlagKey: f.Key,
-				Value:   f.Value.Default,
-				Version: f.Version,
-				Reason:  valueobject.ReasonRollout,
-				Source:  valueobject.SourceCache,
-			}
+			Source:  source,
 		}
 	}
 
 	// Rule matching.
-	for _, r := range f.Rules {
+	rules := append([]entity.FlagRule(nil), f.Rules...)
+	sort.SliceStable(rules, func(i, j int) bool {
+		if rules[i].Priority == rules[j].Priority {
+			return rules[i].ID < rules[j].ID
+		}
+		return rules[i].Priority < rules[j].Priority
+	})
+	for _, r := range rules {
 		if ruleMatches(evalCtx, r) {
 			rid := r.ID
 			return valueobject.EvaluationResult{
@@ -104,8 +121,34 @@ func evaluateOne(scope valueobject.Scope, evalCtx valueobject.EvaluationContext,
 				Version:       f.Version,
 				Reason:        valueobject.ReasonRule,
 				MatchedRuleID: &rid,
-				Source:        valueobject.SourceCache,
+				Source:        source,
 			}
+		}
+	}
+
+	if f.Rollout != nil {
+		sticky, ok := rolloutStickinessValue(evalCtx, f.Rollout.Stickiness)
+		if !ok || !valueobject.BucketMatch(scope.ProjectID, scope.EnvironmentKey, f.Key, sticky, f.Rollout.Percentage) {
+			return valueobject.EvaluationResult{
+				FlagKey: f.Key,
+				Value:   f.Value.Default,
+				Version: f.Version,
+				Reason:  valueobject.ReasonRolloutMiss,
+				Source:  source,
+			}
+		}
+		value := f.Value.Default
+		if f.Value.Type == entity.FlagValueTypeBoolean {
+			if _, ok := f.Value.Default.(bool); ok {
+				value = true
+			}
+		}
+		return valueobject.EvaluationResult{
+			FlagKey: f.Key,
+			Value:   value,
+			Version: f.Version,
+			Reason:  valueobject.ReasonRolloutMatch,
+			Source:  source,
 		}
 	}
 
@@ -114,7 +157,28 @@ func evaluateOne(scope valueobject.Scope, evalCtx valueobject.EvaluationContext,
 		Value:   f.Value.Default,
 		Version: f.Version,
 		Reason:  valueobject.ReasonDefault,
-		Source:  valueobject.SourceCache,
+		Source:  source,
+	}
+}
+
+func rolloutStickinessValue(ctx valueobject.EvaluationContext, stickiness string) (string, bool) {
+	if stickiness == "" || stickiness == "userId" {
+		return ctx.UserID, ctx.UserID != ""
+	}
+	if ctx.Attributes == nil {
+		return "", false
+	}
+	v, ok := ctx.Attributes[stickiness]
+	if !ok {
+		return "", false
+	}
+	switch tv := v.(type) {
+	case string:
+		return tv, tv != ""
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+		return fmt.Sprint(tv), true
+	default:
+		return "", false
 	}
 }
 
@@ -142,14 +206,7 @@ func ruleMatches(ctx valueobject.EvaluationContext, rule entity.FlagRule) bool {
 }
 
 func equal(a, b any) bool {
-	// MVP: rely on Go == for comparable, fallback to string compare.
-	switch av := a.(type) {
-	case string:
-		if bv, ok := b.(string); ok {
-			return av == bv
-		}
-	}
-	return a == b
+	return reflect.DeepEqual(a, b)
 }
 
 func contains(container any, item any) bool {

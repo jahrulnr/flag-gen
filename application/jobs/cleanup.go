@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"sync"
 	"time"
 
 	"flag-gen/infrastructure/cache"
@@ -14,6 +15,8 @@ import (
 )
 
 const softDeleteCleanupLockKey = "flag-gen:lock:cleanup:global"
+
+var cleanupMu sync.Mutex
 
 // StartSoftDeleteCleanup periodically hard-deletes soft-deleted flags past retention, optionally prunes
 // version/audit history per scope, and uses a Redis lock so only one replica runs a tick at a time.
@@ -37,6 +40,11 @@ func StartSoftDeleteCleanup(ctx context.Context, db *sql.DB, rdb redis.Universal
 }
 
 func runCleanupTick(ctx context.Context, db *sql.DB, rdb redis.UniversalClient, retention, lockTTL time.Duration, pruneMaxPerScope int) {
+	if !cleanupMu.TryLock() {
+		return
+	}
+	defer cleanupMu.Unlock()
+
 	cctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
@@ -66,16 +74,67 @@ func runCleanupTick(ctx context.Context, db *sql.DB, rdb redis.UniversalClient, 
 	if sec < 1 {
 		sec = 1
 	}
-	q := fmt.Sprintf(`
-DELETE FROM flags
-WHERE deleted_at IS NOT NULL AND deleted_at < DATE_SUB(UTC_TIMESTAMP(3), INTERVAL %s SECOND)`, strconv.Itoa(sec))
-	if _, err := db.ExecContext(cctx, q); err != nil {
-		log.Printf("cleanup: soft-delete purge failed: %v", err)
-	}
+	purgeSoftDeleted(cctx, db, sec)
 
 	if pruneMaxPerScope > 0 {
 		pruneExcessVersions(cctx, db, pruneMaxPerScope)
 		pruneExcessAudit(cctx, db, pruneMaxPerScope)
+	}
+}
+
+func purgeSoftDeleted(ctx context.Context, db *sql.DB, retentionSeconds int) {
+	interval := strconv.Itoa(retentionSeconds)
+	queries := []struct {
+		name string
+		sql  string
+	}{
+		{
+			name: "flag rules for deleted flags",
+			sql: fmt.Sprintf(`
+DELETE fr FROM flag_rules fr
+INNER JOIN flags f ON f.id = fr.flag_id
+WHERE f.deleted_at IS NOT NULL AND f.deleted_at < DATE_SUB(UTC_TIMESTAMP(3), INTERVAL %s SECOND)`, interval),
+		},
+		{
+			name: "flags",
+			sql: fmt.Sprintf(`
+DELETE FROM flags
+WHERE deleted_at IS NOT NULL AND deleted_at < DATE_SUB(UTC_TIMESTAMP(3), INTERVAL %s SECOND)`, interval),
+		},
+		{
+			name: "segments",
+			sql: fmt.Sprintf(`
+DELETE s FROM segments s
+WHERE s.deleted_at IS NOT NULL
+  AND s.deleted_at < DATE_SUB(UTC_TIMESTAMP(3), INTERVAL %s SECOND)
+  AND NOT EXISTS (
+    SELECT 1 FROM flag_rules fr
+    INNER JOIN flags f ON f.id = fr.flag_id AND f.deleted_at IS NULL
+    WHERE fr.segment_id = s.id
+  )`, interval),
+		},
+		{
+			name: "environments",
+			sql: fmt.Sprintf(`
+DELETE e FROM environments e
+WHERE e.deleted_at IS NOT NULL
+  AND e.deleted_at < DATE_SUB(UTC_TIMESTAMP(3), INTERVAL %s SECOND)
+  AND NOT EXISTS (SELECT 1 FROM flags f WHERE f.environment_id = e.id AND f.deleted_at IS NULL)`, interval),
+		},
+		{
+			name: "projects",
+			sql: fmt.Sprintf(`
+DELETE p FROM projects p
+WHERE p.deleted_at IS NOT NULL
+  AND p.deleted_at < DATE_SUB(UTC_TIMESTAMP(3), INTERVAL %s SECOND)
+  AND NOT EXISTS (SELECT 1 FROM environments e WHERE e.project_id = p.id AND e.deleted_at IS NULL)
+  AND NOT EXISTS (SELECT 1 FROM segments s WHERE s.project_id = p.id AND s.deleted_at IS NULL)`, interval),
+		},
+	}
+	for _, q := range queries {
+		if _, err := db.ExecContext(ctx, q.sql); err != nil {
+			log.Printf("cleanup: purge %s failed: %v", q.name, err)
+		}
 	}
 }
 

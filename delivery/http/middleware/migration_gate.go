@@ -65,7 +65,7 @@ func MigrationGate(svc SystemClassifier) gin.HandlerFunc {
 }
 
 func gateAllow(cl migrate.Classification, path, method string) bool {
-	if strings.HasPrefix(path, "/v1/public/") || strings.HasPrefix(path, "/api/public/") {
+	if strings.HasPrefix(path, "/v1/public/") || strings.HasPrefix(path, "/api/public/") || strings.HasPrefix(path, "/v1/client/") || strings.HasPrefix(path, "/api/client/") {
 		switch cl.State {
 		case migrate.StateDBReady, migrate.StateMigrationOptional:
 			return true

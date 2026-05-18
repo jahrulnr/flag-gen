@@ -7,6 +7,7 @@ import { AuditPage } from './features/audit/audit-page';
 import { FlagHistoryPage } from './features/audit/flag-history-page';
 import { LoginPage } from './features/auth/login-page';
 import { DashboardShell } from './features/dashboard/dashboard-shell';
+import { DeveloperWikiPage } from './features/developer-wiki/developer-wiki-page';
 import { EnvironmentsPage } from './features/environments/environments-page';
 import { FlagsPage } from './features/flags/flags-page';
 import { LifecyclePage } from './features/lifecycle/lifecycle-page';
@@ -45,6 +46,7 @@ export const routes: Routes = [
         data: { wikiId: 'segments' },
       },
       { path: 'audit', component: AuditPage, data: { wikiId: 'audit' } },
+      { path: 'developer-wiki', component: DeveloperWikiPage, data: { wikiId: 'developer-wiki' } },
       { path: 'users', component: UsersPage, data: { wikiId: 'lifecycle' } },
       { path: 'roles', component: RolesPage, data: { wikiId: 'lifecycle' } },
     ],

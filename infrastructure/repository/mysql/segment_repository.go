@@ -140,6 +140,19 @@ WHERE project_id = ? AND id = ? AND deleted_at IS NULL`
 }
 
 func (r *SegmentRepository) SoftDelete(ctx context.Context, projectID, segmentID string) error {
+	var deps int
+	const depQ = `
+SELECT COUNT(1)
+FROM flag_rules fr
+INNER JOIN flags f ON f.id = fr.flag_id AND f.deleted_at IS NULL
+WHERE fr.segment_id = ? AND f.project_id = ?`
+	if err := r.db.QueryRowContext(ctx, depQ, segmentID, projectID).Scan(&deps); err != nil {
+		return apperror.NewInfrastructureError("DB", "segment dependency check failed", err)
+	}
+	if deps > 0 {
+		return apperror.New(apperror.StatusConflict, "segment_in_use", nil)
+	}
+
 	const q = `
 UPDATE segments
 SET deleted_at = ?, updated_at = ?

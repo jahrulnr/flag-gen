@@ -52,6 +52,12 @@
             <span>Audit</span>
           </a>
         </li>
+        <li>
+          <a class="nav-link" [routerLink]="['/dashboard/developer-wiki']" routerLinkActive="is-active">
+            <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+            <span>Developer Wiki</span>
+          </a>
+        </li>
       </ul>
 
       <p class="nav-label">Access</p>
@@ -77,10 +83,10 @@
       <div class="topbar__left">
         <strong>Admin dashboard</strong>
         <nav class="breadcrumb" aria-label="Breadcrumb">
-          <ng-container *ngIf="isAuditRoute(); else workspaceBread">
+          <ng-container *ngIf="isSystemRoute(); else workspaceBread">
             <span class="breadcrumb__system">System</span>
             <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
-            <span class="breadcrumb__here" aria-current="page">Audit</span>
+            <span class="breadcrumb__here" aria-current="page">{{ isDeveloperWikiRoute() ? 'Developer Wiki' : 'Audit' }}</span>
           </ng-container>
 
           <ng-template #workspaceBread>
@@ -203,8 +209,14 @@
       Schema drift is compatible but migrations are available. Plan a maintenance window.
     </div>
 
-    <div *ngIf="realtime.lastMessage()" class="notice success">
-      Realtime event received: {{ realtime.lastMessage() }}
+    <div *ngIf="realtime.lastEvent() as event" class="notice success notice--event">
+      <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+      <span>
+        Realtime {{ event.type }}
+        <ng-container *ngIf="event.flagKey"> · {{ event.flagKey }}</ng-container>
+        <ng-container *ngIf="event.version"> · v{{ event.version }}</ng-container>
+        <ng-container *ngIf="event.scopeVersion"> · scope {{ event.scopeVersion }}</ng-container>
+      </span>
     </div>
 
     <main class="content">

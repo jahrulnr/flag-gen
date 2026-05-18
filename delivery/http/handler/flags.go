@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"flag-gen/application/usecase"
 	"flag-gen/delivery/http/response"
@@ -276,7 +277,10 @@ func readBody(c *gin.Context) (io.Reader, []byte, error) {
 
 func (h *FlagsHandler) withIdempotency(c *gin.Context, projectID string, rawRequest []byte, fn func() (int, any, error)) error {
 	key := c.GetHeader("Idempotency-Key")
-	if key == "" || h.idem == nil {
+	if key == "" {
+		return apperror.New(apperror.StatusBadRequest, "missing_idempotency_key", nil)
+	}
+	if h.idem == nil {
 		code, body, err := fn()
 		if err != nil {
 			return err
@@ -296,6 +300,9 @@ func (h *FlagsHandler) withIdempotency(c *gin.Context, projectID string, rawRequ
 	if err != nil {
 		return err
 	}
+	if rec.RequestHash != reqHash {
+		return apperror.New(apperror.StatusConflict, "idempotency_conflict", nil)
+	}
 
 	// If already completed, replay response.
 	if rec.Status == entity.IdempotencyCompleted && rec.ResponseCode != nil && len(rec.ResponseJSON) > 0 {
@@ -303,6 +310,10 @@ func (h *FlagsHandler) withIdempotency(c *gin.Context, projectID string, rawRequ
 		_ = json.Unmarshal(rec.ResponseJSON, &anyBody)
 		c.JSON(*rec.ResponseCode, anyBody)
 		return nil
+	}
+	now := time.Now().UTC()
+	if rec.Status == entity.IdempotencyProcessing && rec.LockedUntil != nil && rec.LockedUntil.After(now) && rec.UpdatedAt.Before(now.Add(-time.Second)) {
+		return apperror.New(apperror.StatusConflict, "idempotency_processing", nil)
 	}
 
 	code, body, err := fn()

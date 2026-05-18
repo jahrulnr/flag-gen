@@ -166,6 +166,14 @@ export interface FlagVersion {
   createdAt?: string;
 }
 
+export interface EvaluationResult {
+  value: unknown;
+  version: number;
+  reason: string;
+  matchedRuleId?: string | null;
+  source: string;
+}
+
 export interface DashboardBootstrap extends ApiEnvelope {
   status: SystemStatus | null;
   csrf: CSRFContract | null;

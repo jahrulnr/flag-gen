@@ -77,8 +77,14 @@ func RegisterRoutes(group *gin.RouterGroup, app *di.ApplicationState, csrf *midd
 	public := group.Group("/public")
 	public.Use(middleware.RateLimit(20, 60))
 	public.Use(middleware.StaticAPIKey("X-Public-Api-Key", app.Config.PublicReadAPIKey))
-	publicHandler := handler.NewPublicFlagsHandler(listFlags)
+	publicHandler := handler.NewPublicFlagsHandler(listFlags, usecase.NewEvaluateFlagsUsecase(app.ScopedFlags))
 	public.GET("/projects/:projectId/environments/:environmentKey/flags", publicHandler.List)
+	public.GET("/projects/:projectId/environments/:environmentKey/flags/:flagKey/evaluate", publicHandler.Evaluate)
+	client := group.Group("/client")
+	client.Use(middleware.RateLimit(20, 60))
+	client.Use(middleware.StaticAPIKey("X-Public-Api-Key", app.Config.PublicReadAPIKey))
+	client.GET("/projects/:projectId/environments/:environmentKey/flags", publicHandler.List)
+	client.GET("/projects/:projectId/environments/:environmentKey/flags/:flagKey/evaluate", publicHandler.Evaluate)
 
 	apiKeysHandler := handler.NewAPIKeysHandler(app.MySQL.SQL())
 	group.GET("/projects/:projectId/environments/:environmentKey/api-keys", apiKeysHandler.List)
@@ -124,6 +130,10 @@ func RegisterRoutes(group *gin.RouterGroup, app *di.ApplicationState, csrf *midd
 		middleware.APIKeyRateLimit(20, 60),
 		middleware.RequireAPIKeyScope(app.MySQL.SQL(), "flags:evaluate", requireRuntimeKey),
 		evalHandler.EvaluateGET)
+	group.GET("/projects/:projectId/environments/:environmentKey/flags/:flagKey/evaluate",
+		middleware.APIKeyRateLimit(20, 60),
+		middleware.RequireAPIKeyScope(app.MySQL.SQL(), "flags:evaluate", requireRuntimeKey),
+		evalHandler.EvaluateFlagGET)
 
 	group.GET("/projects/:projectId/environments/:environmentKey/flags/:flagKey", flagsHandler.GetByKey)
 	group.PATCH("/projects/:projectId/environments/:environmentKey/flags/:flagKey", flagsHandler.Update)
@@ -135,6 +145,6 @@ func RegisterRoutes(group *gin.RouterGroup, app *di.ApplicationState, csrf *midd
 
 	group.GET("/projects/:projectId/audit", dashboardHandler.ListAudit)
 
-	wsHandler := handler.NewBroadcastWSHandler(app.Config, app.BroadcastHub, app.ScopedFlags)
-	group.GET("/broadcast/flags", middleware.RequireAPIKeyScope(app.MySQL.SQL(), "broadcast:subscribe", false), wsHandler.Connect)
+	wsHandler := handler.NewBroadcastWSHandler(app.Config, app.BroadcastHub, app.ScopedFlags, app.Environments)
+	group.GET("/broadcast/flags", middleware.RequireAPIKeyScope(app.MySQL.SQL(), "broadcast:subscribe", requireRuntimeKey), wsHandler.Connect)
 }

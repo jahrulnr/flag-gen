@@ -10,18 +10,22 @@ type EvaluationContext struct {
 type EvaluationReason string
 
 const (
-	ReasonDefault  EvaluationReason = "default"
-	ReasonRule     EvaluationReason = "rule_match"
-	ReasonRollout  EvaluationReason = "rollout"
-	ReasonDisabled EvaluationReason = "disabled"
-	ReasonNotFound EvaluationReason = "not_found"
-	ReasonError    EvaluationReason = "error"
+	ReasonDefault      EvaluationReason = "default"
+	ReasonRule         EvaluationReason = "rule_match"
+	ReasonRolloutMatch EvaluationReason = "rollout_match"
+	ReasonRolloutMiss  EvaluationReason = "rollout_miss"
+	ReasonDisabled     EvaluationReason = "disabled"
+	ReasonNotFound     EvaluationReason = "not_found"
+	ReasonDegraded     EvaluationReason = "degraded"
+	ReasonError        EvaluationReason = "error"
 )
 
 type EvaluationSource string
 
 const (
 	SourceCache    EvaluationSource = "cache"
+	SourceCacheL1  EvaluationSource = "cache_l1"
+	SourceCacheL2  EvaluationSource = "cache_l2"
 	SourceDatabase EvaluationSource = "database"
 	SourceSnapshot EvaluationSource = "snapshot"
 	SourceDefault  EvaluationSource = "default"

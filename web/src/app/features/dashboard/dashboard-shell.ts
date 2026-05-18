@@ -81,7 +81,8 @@ export class DashboardShell implements OnInit {
     if (
       path.includes('/dashboard/audit') ||
       path.includes('/dashboard/users') ||
-      path.includes('/dashboard/roles')
+      path.includes('/dashboard/roles') ||
+      path.includes('/dashboard/developer-wiki')
     ) {
       this.selectedProjectId.set('');
       this.selectedEnvironmentKey.set('');
@@ -175,8 +176,16 @@ export class DashboardShell implements OnInit {
     return this.routerUrl().split('?')[0].includes('/dashboard/roles');
   }
 
+  isDeveloperWikiRoute(): boolean {
+    return this.routerUrl().split('?')[0].includes('/dashboard/developer-wiki');
+  }
+
   isAccessRoute(): boolean {
     return this.isUsersRoute() || this.isRolesRoute();
+  }
+
+  isSystemRoute(): boolean {
+    return this.isAuditRoute() || this.isDeveloperWikiRoute();
   }
 
   isProjectsListCurrent(): boolean {

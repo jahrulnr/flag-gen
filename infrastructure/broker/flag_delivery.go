@@ -67,14 +67,14 @@ func ProcessFlagBroadcastDelivery(
 	}
 
 	scopeKey := scope.CacheKey()
-	hub.BroadcastJSON(scopeKey, eventID, map[string]any{
-		"type":             d.RoutingKey,
-		"eventId":          eventID,
-		"aggregateVersion": aggVer,
-		"projectId":        projectID,
-		"environmentKey":   envKey,
-		"payload":          json.RawMessage(d.Body),
-	})
+	if _, ok := payload["type"]; !ok {
+		payload["type"] = d.RoutingKey
+	}
+	if _, ok := payload["eventId"]; !ok {
+		payload["eventId"] = eventID
+	}
+	payload["aggregateVersion"] = aggVer
+	hub.BroadcastJSON(scopeKey, eventID, payload)
 	return true
 }
 

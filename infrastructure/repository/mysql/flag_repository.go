@@ -316,13 +316,17 @@ VALUES
 		return entity.Flag{}, err
 	}
 
+	scopeVersion, err := r.bumpEnvironmentVersion(ctx, tx, envID)
+	if err != nil {
+		return entity.Flag{}, err
+	}
 	if err := r.insertFlagVersion(ctx, tx, scope.ProjectID, envID, f, "created"); err != nil {
 		return entity.Flag{}, err
 	}
 	if err := r.insertAuditEntry(ctx, tx, scope.ProjectID, envID, f.ID, "created", nil, mustJSON(f)); err != nil {
 		return entity.Flag{}, err
 	}
-	if err := r.insertOutbox(ctx, tx, scope.ProjectID, envID, scope.EnvironmentKey, f.ID, f.Key, f.Version, "flag.created"); err != nil {
+	if err := r.insertOutbox(ctx, tx, scope.ProjectID, envID, scope.EnvironmentKey, &f, "flag.created", scopeVersion); err != nil {
 		return entity.Flag{}, err
 	}
 
@@ -396,6 +400,10 @@ WHERE id = ? AND project_id = ? AND environment_id = ? AND deleted_at IS NULL AN
 	// bump in-memory version after successful DB update
 	f.Version = f.Version + 1
 
+	scopeVersion, err := r.bumpEnvironmentVersion(ctx, tx, envID)
+	if err != nil {
+		return entity.Flag{}, err
+	}
 	if err := r.insertFlagVersion(ctx, tx, scope.ProjectID, envID, f, "updated"); err != nil {
 		return entity.Flag{}, err
 	}
@@ -406,7 +414,7 @@ WHERE id = ? AND project_id = ? AND environment_id = ? AND deleted_at IS NULL AN
 	if err := r.insertAuditEntry(ctx, tx, scope.ProjectID, envID, f.ID, "updated", oldJSON, mustJSON(f)); err != nil {
 		return entity.Flag{}, err
 	}
-	if err := r.insertOutbox(ctx, tx, scope.ProjectID, envID, scope.EnvironmentKey, f.ID, f.Key, f.Version, "flag.updated"); err != nil {
+	if err := r.insertOutbox(ctx, tx, scope.ProjectID, envID, scope.EnvironmentKey, &f, "flag.updated", scopeVersion); err != nil {
 		return entity.Flag{}, err
 	}
 
@@ -448,6 +456,16 @@ WHERE id = ? AND project_id = ? AND environment_id = ? AND deleted_at IS NULL AN
 	// Write audit/outbox/version as best effort; if old is nil, still record delete event.
 	if old != nil {
 		old.Version = expectedVersion + 1
+		old.DeletedAt = &now
+	}
+	scopeVersion, err := r.bumpEnvironmentVersion(ctx, tx, envID)
+	if err != nil {
+		return err
+	}
+	if old != nil {
+		if err := r.insertFlagVersion(ctx, tx, scope.ProjectID, envID, *old, "deleted"); err != nil {
+			return err
+		}
 	}
 	if err := r.insertAuditEntry(ctx, tx, scope.ProjectID, envID, flagID, "deleted", func() []byte {
 		if old == nil {
@@ -457,12 +475,11 @@ WHERE id = ? AND project_id = ? AND environment_id = ? AND deleted_at IS NULL AN
 	}(), nil); err != nil {
 		return err
 	}
-	if err := r.insertOutbox(ctx, tx, scope.ProjectID, envID, scope.EnvironmentKey, flagID, func() string {
-		if old != nil {
-			return old.Key
-		}
-		return ""
-	}(), expectedVersion+1, "flag.deleted"); err != nil {
+	deletedFlag := &entity.Flag{ID: flagID, Version: expectedVersion + 1, DeletedAt: &now}
+	if old != nil {
+		deletedFlag = old
+	}
+	if err := r.insertOutbox(ctx, tx, scope.ProjectID, envID, scope.EnvironmentKey, deletedFlag, "flag.deleted", scopeVersion); err != nil {
 		return err
 	}
 
@@ -641,30 +658,84 @@ VALUES (?, ?, ?, 'flag', ?, ?, NULL, ?, ?, ?, ?)`
 	return nil
 }
 
-func (r *FlagRepository) insertOutbox(ctx context.Context, ex execer, projectID, envID, environmentKey, flagID, flagKey string, version int, eventType string) error {
+func (r *FlagRepository) bumpEnvironmentVersion(ctx context.Context, ex execer, envID string) (int, error) {
+	const q = `UPDATE environments SET version = version + 1, updated_at = ? WHERE id = ?`
+	if _, err := ex.ExecContext(ctx, q, time.Now().UTC(), envID); err != nil {
+		return 0, apperror.NewInfrastructureError("DB", "environment version bump failed", err)
+	}
+	const getQ = `SELECT version FROM environments WHERE id = ?`
+	type queryer interface {
+		QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+	}
+	qr, ok := ex.(queryer)
+	if !ok {
+		return 0, apperror.NewInfrastructureError("DB", "environment version read unsupported", nil)
+	}
+	var version int
+	if err := qr.QueryRowContext(ctx, getQ, envID).Scan(&version); err != nil {
+		return 0, apperror.NewInfrastructureError("DB", "environment version read failed", err)
+	}
+	return version, nil
+}
+
+func (r *FlagRepository) insertOutbox(ctx context.Context, ex execer, projectID, envID, environmentKey string, f *entity.Flag, eventType string, scopeVersion int) error {
 	const q = `
 INSERT INTO outbox_events
   (id, aggregate_type, aggregate_id, aggregate_version, scope_version, project_id, environment_id, event_type, payload_json, status, retry_count, next_attempt_at, created_at)
 VALUES
-  (?, 'flag', ?, ?, 0, ?, ?, ?, ?, 'pending', 0, NULL, ?)`
+  (?, 'flag', ?, ?, ?, ?, ?, ?, ?, 'pending', 0, NULL, ?)`
 
-	payload := map[string]any{
-		"projectId":      projectID,
-		"environmentId":  envID,
-		"environmentKey": environmentKey,
-		"flagId":         flagID,
-		"flagKey":        flagKey,
-		"version":        version,
-		"eventType":      eventType,
-		"correlationId":  func() string { v, _ := ctx.Value(requestctx.CorrelationIDKey).(string); return v }(),
-		"occurredAt":     time.Now().UTC().Format(time.RFC3339Nano),
-	}
+	eventID := uuid.NewString()
+	payload := flagOutboxPayload(ctx, eventID, projectID, envID, environmentKey, f, eventType, scopeVersion)
 	b, _ := json.Marshal(payload)
-	_, err := ex.ExecContext(ctx, q, uuid.NewString(), flagID, version, projectID, envID, eventType, b, time.Now().UTC())
+	_, err := ex.ExecContext(ctx, q, eventID, f.ID, f.Version, scopeVersion, projectID, envID, eventType, b, time.Now().UTC())
 	if err != nil {
 		return apperror.NewInfrastructureError("DB", "outbox insert failed", err)
 	}
 	return nil
+}
+
+func flagOutboxPayload(ctx context.Context, eventID, projectID, envID, environmentKey string, f *entity.Flag, eventType string, scopeVersion int) map[string]any {
+	payload := map[string]any{
+		"type":           eventType,
+		"eventId":        eventID,
+		"projectId":      projectID,
+		"environmentId":  envID,
+		"environmentKey": environmentKey,
+		"flagId":         f.ID,
+		"flagKey":        f.Key,
+		"scopeVersion":   scopeVersion,
+		"version":        f.Version,
+		"correlationId":  func() string { v, _ := ctx.Value(requestctx.CorrelationIDKey).(string); return v }(),
+		"occurredAt":     time.Now().UTC().Format(time.RFC3339Nano),
+	}
+	if eventType != "flag.deleted" {
+		payload["enabled"] = f.Enabled
+		payload["clientSide"] = f.ClientSide
+		payload["value"] = map[string]any{"type": string(f.Value.Type), "default": f.Value.Default}
+		payload["rules"] = flagRulesPayload(f.Rules)
+		if f.Rollout != nil {
+			payload["rollout"] = map[string]any{"percentage": f.Rollout.Percentage, "stickiness": f.Rollout.Stickiness}
+		} else {
+			payload["rollout"] = nil
+		}
+	}
+	return payload
+}
+
+func flagRulesPayload(rules []entity.FlagRule) []map[string]any {
+	out := make([]map[string]any, 0, len(rules))
+	for _, r := range rules {
+		out = append(out, map[string]any{
+			"id":        r.ID,
+			"attribute": r.Attribute,
+			"operator":  string(r.Operator),
+			"value":     r.Value,
+			"serve":     r.Serve,
+			"priority":  r.Priority,
+		})
+	}
+	return out
 }
 
 func mustJSON(v any) []byte {

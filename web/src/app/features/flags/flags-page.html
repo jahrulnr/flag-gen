@@ -50,6 +50,10 @@
           <i class="fa-solid fa-pen" aria-hidden="true"></i>
           Edit
         </button>
+        <button type="button" class="btn btn--ghost" (click)="openEvaluate(flag)">
+          <i class="fa-solid fa-vial" aria-hidden="true"></i>
+          Evaluate
+        </button>
         <a class="btn btn--ghost" [routerLink]="['/dashboard/projects', projectId(), 'environments', environmentKey(), 'flags', id(flag), 'history']">
           <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
           History
@@ -178,6 +182,60 @@
           </button>
         </footer>
       </form>
+    </div>
+  </div>
+
+  <div class="flag-modal" *ngIf="evaluateOpen()" role="dialog" aria-modal="true" aria-labelledby="evaluate-title">
+    <div class="flag-modal__panel flag-modal__panel--narrow">
+      <header class="flag-modal__header">
+        <div>
+          <p class="eyebrow">Runtime check</p>
+          <h2 id="evaluate-title">Evaluate {{ evaluateFlagKey() }}</h2>
+        </div>
+        <button type="button" class="btn btn--icon btn--ghost" (click)="closeEvaluate()" aria-label="Close evaluator">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </header>
+
+      <div *ngIf="evaluateError()" class="form-error" role="alert">{{ evaluateError() }}</div>
+
+      <form (ngSubmit)="runEvaluate()" class="form evaluate-form">
+        <label class="field">
+          User ID
+          <input name="evalUserId" [(ngModel)]="evaluateForm.userId" />
+        </label>
+        <label class="field field--full">
+          <span class="field__label">Attributes <span class="optional">(JSON)</span></span>
+          <textarea name="evalAttributes" [(ngModel)]="evaluateForm.attributesJson" rows="5"></textarea>
+        </label>
+        <button type="submit" class="btn btn--primary" [disabled]="evaluating()">
+          <i class="fa-solid fa-play" aria-hidden="true"></i>
+          {{ evaluating() ? 'Evaluating…' : 'Run evaluation' }}
+        </button>
+      </form>
+
+      <section class="evaluate-result" *ngIf="evaluateResult() as result" aria-label="Evaluation result">
+        <div>
+          <span>Value</span>
+          <code>{{ formatResultValue(result) }}</code>
+        </div>
+        <div>
+          <span>Reason</span>
+          <strong>{{ result.reason }}</strong>
+        </div>
+        <div>
+          <span>Source</span>
+          <strong>{{ result.source }}</strong>
+        </div>
+        <div>
+          <span>Version</span>
+          <strong>v{{ result.version }}</strong>
+        </div>
+        <div *ngIf="result.matchedRuleId">
+          <span>Matched rule</span>
+          <strong>{{ result.matchedRuleId }}</strong>
+        </div>
+      </section>
     </div>
   </div>
 

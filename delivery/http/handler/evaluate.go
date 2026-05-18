@@ -30,6 +30,14 @@ type evaluateRequest struct {
 	Flags []string `json:"flags"`
 }
 
+type evaluationResultDTO struct {
+	Value         any     `json:"value"`
+	Version       int     `json:"version"`
+	Reason        string  `json:"reason"`
+	MatchedRuleID *string `json:"matchedRuleId"`
+	Source        string  `json:"source"`
+}
+
 func (h *EvaluateHandler) Evaluate(c *gin.Context) {
 	scope := valueobject.Scope{ProjectID: c.Param("projectId"), EnvironmentKey: c.Param("environmentKey")}
 
@@ -53,7 +61,11 @@ func (h *EvaluateHandler) Evaluate(c *gin.Context) {
 		response.AbortErr(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"results": out, "correlationId": response.CorrelationID(c)})
+	c.JSON(http.StatusOK, gin.H{
+		"results":       mapEvaluationResults(out),
+		"timestamp":     time.Now().UTC().Format(time.RFC3339Nano),
+		"correlationId": response.CorrelationID(c),
+	})
 }
 
 // EvaluateGET supports GET .../flags/evaluate?flagKey=...&userId=... for simple dashboard/debug flows.
@@ -81,7 +93,45 @@ func (h *EvaluateHandler) EvaluateGET(c *gin.Context) {
 		return
 	}
 	res := out[flagKey]
-	c.JSON(http.StatusOK, gin.H{"result": res, "correlationId": response.CorrelationID(c)})
+	if res.Reason == valueobject.ReasonNotFound {
+		response.AbortError(c, http.StatusNotFound, "flag_not_found", "flag not found", nil, responseNow())
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"result":        mapEvaluationResult(res),
+		"timestamp":     time.Now().UTC().Format(time.RFC3339Nano),
+		"correlationId": response.CorrelationID(c),
+	})
+}
+
+func (h *EvaluateHandler) EvaluateFlagGET(c *gin.Context) {
+	c.Request.URL.RawQuery = mergeFlagKeyQuery(c.Request.URL.RawQuery, c.Param("flagKey"))
+	h.EvaluateGET(c)
+}
+
+func mapEvaluationResults(in map[string]valueobject.EvaluationResult) map[string]evaluationResultDTO {
+	out := make(map[string]evaluationResultDTO, len(in))
+	for key, res := range in {
+		out[key] = mapEvaluationResult(res)
+	}
+	return out
+}
+
+func mapEvaluationResult(res valueobject.EvaluationResult) evaluationResultDTO {
+	return evaluationResultDTO{
+		Value:         res.Value,
+		Version:       res.Version,
+		Reason:        string(res.Reason),
+		MatchedRuleID: res.MatchedRuleID,
+		Source:        string(res.Source),
+	}
+}
+
+func mergeFlagKeyQuery(rawQuery, flagKey string) string {
+	if rawQuery == "" {
+		return "flagKey=" + flagKey
+	}
+	return rawQuery + "&flagKey=" + flagKey
 }
 
 func recordEvaluateOutcome(err error) {

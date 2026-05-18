@@ -304,6 +304,12 @@
   color: #bbf7d0;
 }
 
+.notice--event {
+  align-items: center;
+  display: flex;
+  gap: 0.55rem;
+}
+
 @media (max-width: 900px) {
   .shell {
     grid-template-columns: 1fr;

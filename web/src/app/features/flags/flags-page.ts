@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { ApiService } from '../../core/api.service';
-import { Flag, rowID, rowKey, rowName } from '../../core/models';
+import { EvaluationResult, Flag, rowID, rowKey, rowName } from '../../core/models';
 import { applyApiFailureToSignals } from '../../core/user-facing-api-error';
 import { ProjectDirectoryService } from '../../core/project-directory.service';
 import { DestructiveConfirmDialogComponent } from '../../ui/destructive-confirm-dialog/destructive-confirm-dialog.component';
@@ -48,6 +48,15 @@ export class FlagsPage implements OnInit {
   readonly formSubmitting = signal(false);
   readonly formError = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
+  readonly evaluateOpen = signal(false);
+  readonly evaluating = signal(false);
+  readonly evaluateError = signal<string | null>(null);
+  readonly evaluateResult = signal<EvaluationResult | null>(null);
+  readonly evaluateFlagKey = signal('');
+  evaluateForm = {
+    userId: 'user-1',
+    attributesJson: '{\n  "country": "ID"\n}',
+  };
 
   readonly destroyDialog = viewChild.required(DestructiveConfirmDialogComponent);
 
@@ -150,6 +159,54 @@ export class FlagsPage implements OnInit {
     this.formDialogOpen.set(true);
   }
 
+  openEvaluate(flag: Flag): void {
+    this.evaluateFlagKey.set(this.key(flag));
+    this.evaluateResult.set(null);
+    this.evaluateError.set(null);
+    this.evaluateOpen.set(true);
+  }
+
+  closeEvaluate(): void {
+    if (this.evaluating()) {
+      return;
+    }
+    this.evaluateOpen.set(false);
+    this.evaluateError.set(null);
+  }
+
+  runEvaluate(): void {
+    const flagKey = this.evaluateFlagKey();
+    if (!flagKey) {
+      return;
+    }
+    const attrs = parseJSON(this.evaluateForm.attributesJson, invalidJSON);
+    if (attrs === invalidJSON || attrs === null || typeof attrs !== 'object' || Array.isArray(attrs)) {
+      this.evaluateError.set('Attributes must be a JSON object.');
+      return;
+    }
+    this.evaluating.set(true);
+    this.evaluateError.set(null);
+    this.evaluateResult.set(null);
+    this.api
+      .post<{ results: Record<string, EvaluationResult> }>(`${this.flagsPath()}/evaluate`, {
+        context: {
+          userId: this.evaluateForm.userId,
+          attributes: attrs,
+        },
+        flags: [flagKey],
+      })
+      .subscribe({
+        next: (res) => {
+          this.evaluating.set(false);
+          this.evaluateResult.set(res.results?.[flagKey] ?? null);
+        },
+        error: (err: unknown) => {
+          this.evaluating.set(false);
+          this.evaluateError.set(errorText(err, 'Failed to evaluate flag'));
+        },
+      });
+  }
+
   closeFormDialog(): void {
     if (this.formSubmitting()) {
       return;
@@ -218,6 +275,16 @@ export class FlagsPage implements OnInit {
 
   version(flag: Flag): number {
     return flag.version ?? flag.Version ?? 0;
+  }
+
+  formatResultValue(result: EvaluationResult | null): string {
+    if (!result) {
+      return '';
+    }
+    if (typeof result.value === 'string') {
+      return result.value;
+    }
+    return JSON.stringify(result.value, null, 2);
   }
 
   projectLabel(): string {

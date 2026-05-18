@@ -35,6 +35,11 @@ type ScopedFlagCache struct {
 	neg     *NegativeFlagCache
 }
 
+type ScopedFlagsResult struct {
+	Flags  []entity.Flag
+	Source valueobject.EvaluationSource
+}
+
 func NewScopedFlagCache(
 	l1 L1,
 	l2 L2,
@@ -85,35 +90,43 @@ func (c *ScopedFlagCache) MarkFlagMissing(scope valueobject.Scope, flagKey strin
 }
 
 func (c *ScopedFlagCache) Get(ctx context.Context, scope valueobject.Scope) ([]entity.Flag, error) {
+	res, err := c.GetWithSource(ctx, scope)
+	if err != nil {
+		return nil, err
+	}
+	return res.Flags, nil
+}
+
+func (c *ScopedFlagCache) GetWithSource(ctx context.Context, scope valueobject.Scope) (ScopedFlagsResult, error) {
 	key := ScopeKey(scope)
 
 	if c.breaker != nil && c.breaker.IsOpen() {
 		metrics.Inc("scoped_cache_circuit_block_total", 1)
-		return nil, apperror.New(apperror.StatusServiceUnavailable, "circuit_open", nil)
+		return ScopedFlagsResult{}, apperror.New(apperror.StatusServiceUnavailable, "circuit_open", nil)
 	}
 
 	if v, ok := c.l1.Get(key); ok {
 		if c.breaker != nil {
 			c.breaker.RecordSuccess()
 		}
-		return v, nil
+		return ScopedFlagsResult{Flags: v, Source: valueobject.SourceCacheL1}, nil
 	}
 
 	out, err := c.sf.Do(key, func() (any, error) {
 		if v, ok := c.l1.Get(key); ok {
-			return v, nil
+			return ScopedFlagsResult{Flags: v, Source: valueobject.SourceCacheL1}, nil
 		}
 
 		if flags, ok, err := c.l2.Get(ctx, key); err == nil && ok {
 			c.l1.Set(key, flags, DefaultL1TTL)
-			return flags, nil
+			return ScopedFlagsResult{Flags: flags, Source: valueobject.SourceCacheL2}, nil
 		}
 
 		flags, _, err := c.flagsRepo.ListByScope(ctx, scope, "", 500, 0)
 		if err == nil {
 			_ = c.l2.Set(ctx, key, flags, DefaultL2TTL)
 			c.l1.Set(key, flags, DefaultL1TTL)
-			return flags, nil
+			return ScopedFlagsResult{Flags: flags, Source: valueobject.SourceDatabase}, nil
 		}
 
 		if c.snapReader != nil {
@@ -135,7 +148,7 @@ func (c *ScopedFlagCache) Get(ctx context.Context, scope valueobject.Scope) ([]e
 
 				c.l1.Set(key, fromFile, DefaultDegradedCacheTTL)
 				_ = c.l2.Set(ctx, key, fromFile, DefaultDegradedCacheTTL)
-				return fromFile, nil
+				return ScopedFlagsResult{Flags: fromFile, Source: valueobject.SourceSnapshot}, nil
 			}
 		}
 
@@ -143,14 +156,14 @@ func (c *ScopedFlagCache) Get(ctx context.Context, scope valueobject.Scope) ([]e
 			c.breaker.RecordFailure()
 		}
 		metrics.Inc("scoped_cache_service_degraded_total", 1)
-		return nil, apperror.New(apperror.StatusServiceUnavailable, "service_degraded", err)
+		return ScopedFlagsResult{}, apperror.New(apperror.StatusServiceUnavailable, "service_degraded", err)
 	})
 	if err != nil {
-		return nil, err
+		return ScopedFlagsResult{}, err
 	}
 	if c.breaker != nil {
 		c.breaker.RecordSuccess()
 	}
-	typed, _ := out.([]entity.Flag)
+	typed, _ := out.(ScopedFlagsResult)
 	return typed, nil
 }
