@@ -56,6 +56,7 @@ export const WIKI_CONTENT: Record<WikiId, WikiContent> = {
         bullets: [
           'Use a stable key such as checkout or mobile_app; avoid temporary campaign names.',
           'Pick a readable name so operators can recognize ownership quickly.',
+          'Note the Project ID on this page — integrations (API, WebSocket, SDK) require the UUID, not the key.',
           'Open Environments after creating a project to define production, staging, or local contexts.',
         ],
       },
@@ -79,6 +80,7 @@ export const WIKI_CONTENT: Record<WikiId, WikiContent> = {
         bullets: [
           'Create production first, then add staging or QA environments as needed.',
           'Use short lowercase keys like production, staging, or qa because they appear in URLs and SDK paths.',
+          'Copy the Project ID from the API & SDK identifiers panel — integrations need the UUID, not the project key.',
           'Use sort order to keep the most important environments at the top.',
         ],
       },
@@ -202,6 +204,14 @@ export const WIKI_CONTENT: Record<WikiId, WikiContent> = {
     title: 'How to choose an integration path',
     summary: 'Use browser-safe HTTP endpoints for frontend apps and WebSocket-backed local state for backend services.',
     sections: [
+      {
+        title: 'Project key vs project ID',
+        bullets: [
+          'Project key is the short label you create (e.g. development) — shown in the dashboard only.',
+          'Project ID is the UUID — required in every /v1/projects/:projectId/... path and WebSocket projectId= query.',
+          'Environment scope uses environment key (e.g. production), same style as you see in the UI.',
+        ],
+      },
       {
         title: 'Frontend apps',
         bullets: [

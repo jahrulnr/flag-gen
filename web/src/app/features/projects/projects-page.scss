@@ -215,6 +215,21 @@ a.btn {
   margin-top: 0;
 }
 
+.list-row__meta--integration {
+  margin-top: 0.5rem;
+}
+
+.list-row__project-id {
+  word-break: break-all;
+}
+
+.list-meta__note {
+  color: var(--fg-muted);
+  flex: 1 1 100%;
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
 code {
   color: var(--fg-muted);
   display: block;

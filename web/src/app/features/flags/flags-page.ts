@@ -9,6 +9,7 @@ import { applyApiFailureToSignals } from '../../core/user-facing-api-error';
 import { ProjectDirectoryService } from '../../core/project-directory.service';
 import { DestructiveConfirmDialogComponent } from '../../ui/destructive-confirm-dialog/destructive-confirm-dialog.component';
 import { InlineApiErrorComponent } from '../../ui/inline-api-error/inline-api-error.component';
+import { IntegrationScopeCalloutComponent } from '../../ui/integration-scope-callout/integration-scope-callout.component';
 import { ListToolbarComponent } from '../../ui/list-toolbar/list-toolbar.component';
 import { WikiButtonComponent } from '../../wiki/wiki-button.component';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -22,6 +23,7 @@ import { RealtimeService } from '../realtime/realtime.service';
     WikiButtonComponent,
     DestructiveConfirmDialogComponent,
     InlineApiErrorComponent,
+    IntegrationScopeCalloutComponent,
     ListToolbarComponent,
   ],
   templateUrl: './flags-page.html',
@@ -148,7 +150,10 @@ export class FlagsPage implements OnInit {
       enabled: flag.enabled ?? flag.Enabled ?? false,
       clientSide: flag.clientSide ?? flag.ClientSide ?? false,
       valueType: flag.value?.type ?? flag.Value?.Type ?? 'boolean',
-      defaultValue: String(flag.value?.default ?? flag.Value?.Default ?? false),
+      defaultValue: defaultValueToFormString(
+        flag.value?.default ?? flag.Value?.Default,
+        flag.value?.type ?? flag.Value?.Type ?? 'boolean',
+      ),
       rolloutPercentage: flag.rollout?.percentage ?? flag.Rollout?.Percentage ?? 0,
       rolloutStickiness: flag.rollout?.stickiness ?? flag.Rollout?.Stickiness ?? 'userId',
       rulesJson: JSON.stringify(flag.rules ?? flag.Rules ?? [], null, 2),
@@ -304,6 +309,11 @@ export class FlagsPage implements OnInit {
     if (this.form.valueType === 'boolean') {
       const raw = String(this.form.defaultValue).trim().toLowerCase();
       this.form.defaultValue = raw === 'true' ? 'true' : 'false';
+      return;
+    }
+    const raw = String(this.form.defaultValue).trim();
+    if (raw === '' || raw === '[object Object]') {
+      this.form.defaultValue = '{}';
     }
   }
 
@@ -381,6 +391,32 @@ export class FlagsPage implements OnInit {
 }
 
 const invalidJSON = Symbol('invalid-json');
+
+/** Serialize API default for the edit form (avoids `[object Object]` for JSON flags). */
+function defaultValueToFormString(raw: unknown, valueType: string): string {
+  if (valueType === 'json') {
+    if (raw === undefined || raw === null) {
+      return '{}';
+    }
+    if (typeof raw === 'string') {
+      const trimmed = raw.trim();
+      if (trimmed === '' || trimmed === '[object Object]') {
+        return '{}';
+      }
+      try {
+        JSON.parse(trimmed);
+        return trimmed;
+      } catch {
+        return JSON.stringify(raw);
+      }
+    }
+    return JSON.stringify(raw, null, 2);
+  }
+  if (typeof raw === 'boolean') {
+    return raw ? 'true' : 'false';
+  }
+  return String(raw).trim().toLowerCase() === 'true' ? 'true' : 'false';
+}
 
 function parseJSON(value: string, fallback: unknown): unknown {
   try {

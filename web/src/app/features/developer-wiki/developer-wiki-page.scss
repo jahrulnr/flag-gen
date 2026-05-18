@@ -97,12 +97,74 @@
 }
 
 .guide-code code,
-.reference-grid code {
+.reference-grid code,
+.guide-identifiers__example code,
+.identifier-grid code {
   color: var(--fg-primary);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.84rem;
   line-height: 1.55;
   white-space: pre-wrap;
+}
+
+.guide-identifiers__lead,
+.guide-identifiers__example {
+  color: var(--fg-secondary);
+  line-height: 1.55;
+  margin: 0 0 1rem;
+}
+
+.guide-identifiers,
+.guide-identifiers h2 {
+  color: var(--fg-primary);
+}
+
+.guide-identifiers {
+  background: rgb(15 23 42 / 72%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+}
+
+.guide-identifiers h2 {
+  font-size: 1.1rem;
+  margin: 0 0 0.75rem;
+}
+
+.identifier-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 0.75rem;
+}
+
+.identifier-grid article {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem;
+}
+
+.identifier-grid__primary {
+  border-color: rgb(52 211 153 / 35%);
+}
+
+.identifier-grid h3 {
+  color: var(--fg-primary);
+  font-size: 0.95rem;
+  margin: 0 0 0.45rem;
+}
+
+.identifier-grid p {
+  color: var(--fg-secondary);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  margin: 0 0 0.35rem;
+}
+
+.identifier-grid .hint {
+  color: var(--fg-muted);
+  font-size: 0.8rem;
+  margin: 0;
 }
 
 .reference-grid {
@@ -126,7 +188,8 @@
 
 @media (max-width: 980px) {
   .guide-layout,
-  .reference-grid {
+  .reference-grid,
+  .identifier-grid {
     grid-template-columns: 1fr;
   }
 }

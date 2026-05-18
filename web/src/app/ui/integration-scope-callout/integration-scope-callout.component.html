@@ -1,0 +1,23 @@
+<aside class="integration-scope" aria-label="API and SDK identifiers">
+  <p class="integration-scope__title">
+    <i class="fa-solid fa-plug" aria-hidden="true"></i>
+    API &amp; SDK identifiers
+  </p>
+  <div class="integration-scope__grid">
+    <div class="integration-scope__item">
+      <span class="integration-scope__label">Project key</span>
+      <code>{{ projectKey() }}</code>
+      <p class="integration-scope__hint">Human-readable label in the dashboard</p>
+    </div>
+    <div class="integration-scope__item integration-scope__item--primary">
+      <span class="integration-scope__label">Project ID</span>
+      <code class="integration-scope__id">{{ projectId() }}</code>
+      <p class="integration-scope__hint">Use in URL paths and <code>projectId=</code> (WebSocket, SDK)</p>
+    </div>
+    <div class="integration-scope__item" *ngIf="showEnvironment()">
+      <span class="integration-scope__label">Environment key</span>
+      <code>{{ environmentKey() }}</code>
+      <p class="integration-scope__hint">Use in URL paths and <code>environmentKey=</code></p>
+    </div>
+  </div>
+</aside>

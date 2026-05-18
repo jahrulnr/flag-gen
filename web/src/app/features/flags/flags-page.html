@@ -17,6 +17,8 @@
     </div>
   </header>
 
+  <app-integration-scope-callout [projectId]="projectId()" [environmentKey]="environmentKey()" />
+
   <app-inline-api-error [message]="error()" [reference]="errorRef()" />
 
   <app-list-toolbar
@@ -120,9 +122,14 @@
               <small>{{ form.defaultValue === 'true' ? 'True' : 'False' }} when no targeting rule matches</small>
             </span>
           </label>
-          <label class="field" *ngIf="form.valueType !== 'boolean'">
-            Default value
-            <input name="defaultValue" placeholder='e.g. {"variant":"control"}' [(ngModel)]="form.defaultValue" />
+          <label class="field field--full" *ngIf="form.valueType !== 'boolean'">
+            <span class="field__label">Default value <span class="optional">(JSON)</span></span>
+            <textarea
+              name="defaultValue"
+              [(ngModel)]="form.defaultValue"
+              rows="3"
+              placeholder='e.g. {"variant":"control"}'
+            ></textarea>
           </label>
         </div>
 

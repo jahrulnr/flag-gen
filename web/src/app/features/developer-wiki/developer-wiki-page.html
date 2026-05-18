@@ -39,6 +39,33 @@
     </div>
   </section>
 
+  <section class="guide-identifiers" aria-label="Project key vs project ID">
+    <h2>Project key vs project ID</h2>
+    <p class="guide-identifiers__lead">
+      Every project has two identifiers. The dashboard shows both on the <strong>Projects</strong> list and on
+      <strong>Environments</strong> / <strong>Flags</strong> pages under <em>API &amp; SDK identifiers</em>.
+    </p>
+    <div class="identifier-grid">
+      <article>
+        <h3>Project key</h3>
+        <p>Short stable name you choose when creating a project (e.g. <code>development</code>, <code>checkout</code>).</p>
+        <p class="hint">Used in the UI and for human communication. <strong>Not</strong> accepted in API URL paths today.</p>
+      </article>
+      <article class="identifier-grid__primary">
+        <h3>Project ID</h3>
+        <p>UUID assigned by flag-gen (e.g. <code>2c9be7ab-1d09-4caa-bd54-91fdf1d34ee1</code>).</p>
+        <p class="hint">
+          Required in <code>/v1/projects/:projectId/...</code>, WebSocket <code>projectId=</code>, and SDK config
+          (<code>FLAG_GEN_PROJECT_ID</code>). Environment paths use <strong>environment key</strong> instead.
+        </p>
+      </article>
+    </div>
+    <p class="guide-identifiers__example">
+      Example path:
+      <code>GET /v1/projects/&lt;project-id&gt;/environments/development/flags</code>
+    </p>
+  </section>
+
   <section class="guide-reference" aria-label="Endpoint reference">
     <h2>Endpoint Reference</h2>
     <div class="reference-grid">
