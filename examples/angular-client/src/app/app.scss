@@ -1,0 +1,172 @@
+.page {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 3rem;
+}
+
+header h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.5rem;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.card {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-top: 1.25rem;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+}
+
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.card-head h2 {
+  margin: 0.25rem 0 0;
+  font-size: 1rem;
+}
+
+.card-head .muted {
+  margin: 0.25rem 0 0;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.card h2 {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+}
+
+.error.banner {
+  margin: 0 1.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: rgb(248 113 113 / 0.12);
+}
+
+dl {
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0;
+}
+
+dt {
+  color: var(--muted);
+}
+
+code {
+  font-size: 0.85em;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error {
+  color: var(--err);
+  margin-top: 0.75rem;
+}
+
+.flag-list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+}
+
+.flag-list li {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid rgb(255 255 255 / 0.06);
+}
+
+.flag-list .on {
+  color: var(--ok);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+input {
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  background: var(--bg);
+  color: var(--text);
+  min-width: 12rem;
+}
+
+.attrs {
+  display: block;
+  margin-top: 1rem;
+}
+
+textarea {
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  resize: vertical;
+}
+
+.run {
+  margin-top: 1rem;
+}
+
+pre.response {
+  margin: 1rem 0 0;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: var(--bg);
+  overflow: auto;
+  font-size: 0.85rem;
+}

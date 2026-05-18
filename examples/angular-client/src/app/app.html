@@ -1,0 +1,80 @@
+<main class="page">
+  <header>
+    <h1>Flag Gen — Angular client</h1>
+    <p class="muted">Two HTTP samples: <strong>list flags</strong> vs <strong>evaluate</strong> (client-side only).</p>
+  </header>
+
+  <section class="card">
+    <h2>Configuration</h2>
+    <dl>
+      <dt>API</dt>
+      <dd><code>{{ config.flagGenBaseUrl }}</code></dd>
+      <dt>Project</dt>
+      <dd><code>{{ config.projectId || '(set in environment.ts)' }}</code></dd>
+      <dt>Environment</dt>
+      <dd><code>{{ config.environmentKey }}</code></dd>
+    </dl>
+  </section>
+
+  @if (error()) {
+    <p class="error banner">{{ error() }}</p>
+  }
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <span class="badge">Sample 1</span>
+        <h2>List flags</h2>
+        <p class="muted"><code>GET /v1/client/.../flags</code> — flags with <code>clientSide: true</code></p>
+      </div>
+      <button type="button" (click)="loadFlags()" [disabled]="flagsLoading()">
+        {{ flagsLoading() ? 'Loading…' : 'Load flags' }}
+      </button>
+    </div>
+
+    @if (flagsResponse()) {
+      <pre class="response">{{ flagsResponse() | json }}</pre>
+    } @else if (!flagsLoading()) {
+      <p class="muted">Response will appear here (flags array + correlationId).</p>
+    }
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <span class="badge">Sample 2</span>
+        <h2>Evaluate</h2>
+        <p class="muted"><code>POST /v1/client/.../flags/evaluate</code> — value, reason, version, source</p>
+      </div>
+    </div>
+
+    <div class="row">
+      <label>
+        Flag key
+        <input type="text" [(ngModel)]="evaluateFlagKey" placeholder="checkout_v2" list="flag-keys" />
+        <datalist id="flag-keys">
+          @for (f of flagRows(); track f.key) {
+            <option [value]="f.key"></option>
+          }
+        </datalist>
+      </label>
+      <label>
+        userId
+        <input type="text" [(ngModel)]="userId" />
+      </label>
+    </div>
+    <label class="attrs">
+      Attributes <span class="muted">(JSON)</span>
+      <textarea [(ngModel)]="attributesJson" rows="4"></textarea>
+    </label>
+    <button type="button" class="run" (click)="runEvaluate()" [disabled]="evaluateLoading()">
+      {{ evaluateLoading() ? 'Evaluating…' : 'Run evaluation' }}
+    </button>
+
+    @if (evaluateResponse()) {
+      <pre class="response">{{ evaluateResponse() | json }}</pre>
+    } @else if (!evaluateLoading()) {
+      <p class="muted">Response will appear here (results, timestamp, correlationId).</p>
+    }
+  </section>
+</main>
