@@ -332,6 +332,13 @@ paths:
           in: query
           required: false
           schema: { type: string }
+          deprecated: true
+          description: Deprecated; use q. Exact entity id match when q is omitted.
+        - name: q
+          in: query
+          required: false
+          schema: { type: string }
+          description: Filter by entity id (exact), flag key, or flag name (LIKE).
       responses:
         "200": { description: Audit entries }
   /users:

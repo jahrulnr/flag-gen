@@ -18,6 +18,8 @@
 
   <app-inline-api-error [message]="error()" [reference]="errorRef()" />
 
+  <app-destructive-confirm-dialog />
+
   <div class="audit-table-wrap" *ngIf="versions().length > 0">
     <table aria-label="Flag version history">
       <thead>
@@ -25,6 +27,7 @@
           <th>Version</th>
           <th>Change</th>
           <th>Created</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -32,6 +35,18 @@
           <td>{{ row.version ?? row.Version }}</td>
           <td>{{ row.changeType ?? row.ChangeType }}</td>
           <td>{{ formatTimestamp(row.createdAt ?? row.CreatedAt) }}</td>
+          <td>
+            <button
+              *ngIf="canRollback(row)"
+              type="button"
+              class="btn btn--ghost"
+              (click)="rollbackTo(row)"
+            >
+              <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+              Rollback to this version
+            </button>
+            <span *ngIf="!canRollback(row) && versionNumber(row) === currentFlagVersion()" class="audit-secondary">Current</span>
+          </td>
         </tr>
       </tbody>
     </table>

@@ -12,13 +12,13 @@
   <app-inline-api-error [message]="error()" [reference]="errorRef()" />
 
   <app-list-toolbar
-    [q]="filter.entityId"
+    [q]="filter.q"
     (qChange)="setQuery($event)"
     [total]="total()"
     [limit]="limit()"
     [offset]="offset()"
     [loading]="loading()"
-    placeholder="Filter by entity id (UUID) or key…"
+    placeholder="Min 3 characters — flag key, name, or entity ID…"
     (prev)="prevPage()"
     (next)="nextPage()"
     (refresh)="search()"
@@ -88,18 +88,6 @@
         spellcheck="false"
         autocorrect="off"
         autocapitalize="off"
-      />
-    </label>
-    <label class="field">
-      <span class="field__label">Entity ID <span class="optional">(optional)</span></span>
-      <input
-        name="entityId"
-        placeholder="UUID or key"
-        [(ngModel)]="filter.entityId"
-        spellcheck="false"
-        autocorrect="off"
-        autocapitalize="off"
-        autocomplete="off"
       />
     </label>
     <button type="submit" class="btn btn--primary">

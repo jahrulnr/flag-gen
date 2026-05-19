@@ -31,16 +31,16 @@ export class AuthService {
   readonly user = signal<AuthUser | null>(null);
 
   constructor() {
-    if (this.browser && window.localStorage.getItem(STORAGE_KEY) === 'session') {
-      this.refreshUserFromServer();
+    if (!this.browser) {
+      return;
     }
-  }
-
-  signInDev(): void {
-    this.user.set(null);
-    this.signedIn.set(true);
-    if (this.browser) {
-      window.localStorage.setItem(STORAGE_KEY, 'dev');
+    const marker = window.localStorage.getItem(STORAGE_KEY);
+    if (marker === 'dev') {
+      window.localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+    if (marker === 'session') {
+      this.refreshUserFromServer();
     }
   }
 
@@ -65,18 +65,12 @@ export class AuthService {
     this.api.post('/auth/logout', {}).subscribe({ error: () => undefined });
   }
 
-  /**
-   * Route guard: dev bypass trusts localStorage; password login re-validates flag_gen_session cookie.
-   */
+  /** Route guard: password login re-validates flag_gen_session cookie via /auth/me. */
   ensureDashboardAccess(): Observable<boolean> {
     if (!this.browser) {
       return of(false);
     }
     const marker = window.localStorage.getItem(STORAGE_KEY);
-    if (marker === 'dev') {
-      this.signedIn.set(true);
-      return of(true);
-    }
     if (marker !== 'session') {
       this.signedIn.set(false);
       return of(false);
@@ -102,7 +96,7 @@ export class AuthService {
       return false;
     }
     const marker = window.localStorage.getItem(STORAGE_KEY);
-    return marker === 'dev' || marker === 'session';
+    return marker === 'session';
   }
 
   private refreshUserFromServer(): void {

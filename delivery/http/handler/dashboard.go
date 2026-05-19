@@ -95,10 +95,13 @@ func (h *DashboardHandler) ListAudit(c *gin.Context) {
 		projectID = c.Param("projectId")
 	}
 	entityType := c.Query("entityType")
-	entityID := c.Query("entityId")
+	searchQ := c.Query("q")
+	if searchQ == "" {
+		searchQ = c.Query("entityId")
+	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
-	rows, total, err := h.admin.ListAuditEntries(c.Request.Context(), projectID, entityType, entityID, limit, offset)
+	rows, total, err := h.admin.ListAuditEntries(c.Request.Context(), projectID, entityType, searchQ, limit, offset)
 	if err != nil {
 		response.AbortErr(c, err)
 		return

@@ -63,25 +63,28 @@ These examples target the same `/v1` routes used by the Angular dashboard.
 ```bash
 BASE=http://localhost:6123/v1
 
+# List projects and copy the Project ID (UUID) from the row — not the project key.
 curl "$BASE/system/status"
 curl "$BASE/projects"
+PROJECT_ID="<paste-project-uuid-from-dashboard>"
+
 curl -X POST "$BASE/projects" \
   -H 'Content-Type: application/json' \
   -d '{"key":"default","name":"Default"}'
 
-curl "$BASE/projects/default/environments"
-curl -X POST "$BASE/projects/default/environments" \
+curl "$BASE/projects/$PROJECT_ID/environments"
+curl -X POST "$BASE/projects/$PROJECT_ID/environments" \
   -H 'Content-Type: application/json' \
   -d '{"key":"production","name":"Production"}'
 
-curl "$BASE/projects/default/environments/production/flags"
-curl -X POST "$BASE/projects/default/environments/production/flags" \
+curl "$BASE/projects/$PROJECT_ID/environments/production/flags"
+curl -X POST "$BASE/projects/$PROJECT_ID/environments/production/flags" \
   -H 'Content-Type: application/json' \
   -H 'Idempotency-Key: demo-create-checkout' \
   -d '{"key":"checkout","name":"Checkout","enabled":true,"clientSide":true,"value":{"type":"boolean","default":false},"rules":[]}'
 
-curl "$BASE/projects/default/environments/production/flags/evaluate?flagKey=checkout&userId=user-1"
-curl "$BASE/public/projects/default/environments/production/flags" \
+curl "$BASE/projects/$PROJECT_ID/environments/production/flags/evaluate?flagKey=checkout&userId=user-1"
+curl "$BASE/public/projects/$PROJECT_ID/environments/production/flags" \
   -H 'X-Public-Api-Key: dev-public-key'
 ```
 

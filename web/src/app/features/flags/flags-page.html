@@ -20,7 +20,7 @@
   <app-inline-api-error [message]="error()" [reference]="errorRef()" />
 
   <app-list-toolbar
-    [q]="q()"
+    [q]="searchText()"
     (qChange)="setQuery($event)"
     [total]="total()"
     [limit]="limit()"

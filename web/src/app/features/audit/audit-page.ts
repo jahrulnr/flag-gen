@@ -3,6 +3,12 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { ApiService } from '../../core/api.service';
+import {
+  effectiveSearchQuery,
+  scheduleDebouncedSearch,
+  SEARCH_DEBOUNCE_MS,
+  SearchDebounceHandle,
+} from '../../core/list-search';
 import { AuditEntry, Project, rowID, rowKey, rowName } from '../../core/models';
 import { applyApiFailureToSignals } from '../../core/user-facing-api-error';
 import { WorkspaceContextService } from '../../core/workspace-context.service';
@@ -21,6 +27,7 @@ export class AuditPage implements OnInit {
   private readonly api = inject(ApiService);
   private readonly workspace = inject(WorkspaceContextService);
   private projectSearchDebounce: ReturnType<typeof setTimeout> | null = null;
+  private entitySearchDebounce: SearchDebounceHandle = null;
   readonly rows = signal<AuditEntry[]>([]);
   readonly error = signal<string | null>(null);
   readonly errorRef = signal<string | null>(null);
@@ -35,7 +42,7 @@ export class AuditPage implements OnInit {
   readonly projectSearchLoading = signal(false);
   readonly selectedProject = signal<Project | null>(null);
 
-  filter = { projectId: '', entityType: 'flag', entityId: '' };
+  filter = { projectId: '', entityType: 'flag', q: '' };
 
   ngOnInit(): void {
     this.loadProjectOptions('');
@@ -114,7 +121,7 @@ export class AuditPage implements OnInit {
     if (this.projectSearchDebounce) {
       clearTimeout(this.projectSearchDebounce);
     }
-    this.projectSearchDebounce = setTimeout(() => this.loadProjectOptions(q), 180);
+    this.projectSearchDebounce = setTimeout(() => this.loadProjectOptions(q), SEARCH_DEBOUNCE_MS);
   }
 
   loadProjectOptions(q: string): void {
@@ -192,10 +199,13 @@ export class AuditPage implements OnInit {
     this.loading.set(true);
     const query = new URLSearchParams({
       entityType: this.filter.entityType,
-      entityId: this.filter.entityId,
       limit: String(this.limit()),
       offset: String(this.offset()),
     });
+    const effectiveQ = effectiveSearchQuery(this.filter.q);
+    if (effectiveQ) {
+      query.set('q', effectiveQ);
+    }
     this.api
       .get<{ audit: AuditEntry[]; total?: number; limit?: number; offset?: number }>(`/projects/${this.filter.projectId}/audit?${query.toString()}`)
       .subscribe({
@@ -216,9 +226,12 @@ export class AuditPage implements OnInit {
   }
 
   setQuery(q: string): void {
-    this.filter.entityId = q;
+    this.filter.q = q;
     this.offset.set(0);
-    this.search();
+    if (!this.filter.projectId) {
+      return;
+    }
+    this.entitySearchDebounce = scheduleDebouncedSearch(this.entitySearchDebounce, q, () => this.search());
   }
 
   prevPage(): void {

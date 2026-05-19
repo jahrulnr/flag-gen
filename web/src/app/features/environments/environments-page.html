@@ -16,7 +16,7 @@
   <app-inline-api-error [message]="error()" [reference]="errorRef()" />
 
   <app-list-toolbar
-    [q]="q()"
+    [q]="searchText()"
     (qChange)="setQuery($event)"
     [total]="total()"
     [limit]="limit()"
@@ -41,7 +41,7 @@
       Sort order
       <input name="sortOrder" type="number" placeholder="0" [(ngModel)]="form.sortOrder" />
     </label>
-    <button type="submit" class="btn btn--primary">
+    <button type="submit" class="btn btn--primary" [disabled]="!canCreate()">
       <i class="fa-solid fa-plus" aria-hidden="true"></i>
       Create environment
     </button>

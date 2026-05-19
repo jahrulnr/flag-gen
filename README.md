@@ -93,7 +93,7 @@ Local dependencies (see `.env.example`): MySQL `127.0.0.1:3306`, Redis `6379`, R
 
 ## Screenshots
 
-Local seed scope `development` / `development`, demo user `admin@local`.
+Local seed scope `development` / `development` (human-readable keys), demo user `admin@local`. API paths use the **Project ID (UUID)** from the dashboard Projects list, not the project key.
 
 | View | |
 |------|--|

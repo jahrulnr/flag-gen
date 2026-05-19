@@ -69,7 +69,7 @@ WHERE f.project_id = ? AND e.` + "`key`" + ` = ? AND f.id = ? AND fv.version = ?
 	return snap, nil
 }
 
-func (r *AdminReadRepository) ListAuditEntries(ctx context.Context, projectID, entityType, entityID string, limit, offset int) ([]repository.AuditEntrySummary, int, error) {
+func (r *AdminReadRepository) ListAuditEntries(ctx context.Context, projectID, entityType, searchQ string, limit, offset int) ([]repository.AuditEntrySummary, int, error) {
 	if limit <= 0 || limit > 500 {
 		limit = 100
 	}
@@ -87,22 +87,25 @@ WHERE ae.project_id = ?`)
 		sb.WriteString(` AND ae.entity_type = ?`)
 		args = append(args, entityType)
 	}
-	if entityID != "" {
-		sb.WriteString(` AND ae.entity_id = ?`)
-		args = append(args, entityID)
+	searchQ = strings.TrimSpace(searchQ)
+	if searchQ != "" {
+		like := "%" + searchQ + "%"
+		sb.WriteString(` AND (ae.entity_id = ? OR ae.entity_id LIKE ? OR f.` + "`key`" + ` LIKE ? OR f.name LIKE ?)`)
+		args = append(args, searchQ, like, like, like)
 	}
 
 	var total int
 	countQ := `
 SELECT COUNT(1)
 FROM audit_entries ae
+LEFT JOIN flags f ON f.id = ae.entity_id AND ae.entity_type = 'flag' AND f.project_id = ae.project_id
 WHERE ae.project_id = ?` + func() string {
 		var w strings.Builder
 		if entityType != "" {
 			w.WriteString(` AND ae.entity_type = ?`)
 		}
-		if entityID != "" {
-			w.WriteString(` AND ae.entity_id = ?`)
+		if searchQ != "" {
+			w.WriteString(` AND (ae.entity_id = ? OR ae.entity_id LIKE ? OR f.` + "`key`" + ` LIKE ? OR f.name LIKE ?)`)
 		}
 		return w.String()
 	}()

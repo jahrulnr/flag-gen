@@ -4,6 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
 import { ApiService } from '../../core/api.service';
+import {
+  effectiveSearchQuery,
+  scheduleDebouncedSearch,
+  SearchDebounceHandle,
+} from '../../core/list-search';
 import { Project, rowID, rowKey, rowName } from '../../core/models';
 import { applyApiFailureToSignals } from '../../core/user-facing-api-error';
 import { DestructiveConfirmDialogComponent } from '../../ui/destructive-confirm-dialog/destructive-confirm-dialog.component';
@@ -28,6 +33,7 @@ import { WikiButtonComponent } from '../../wiki/wiki-button.component';
 export class ProjectsPage implements OnInit {
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
+  private searchDebounce: SearchDebounceHandle = null;
   readonly projects = signal<Project[]>([]);
   readonly error = signal<string | null>(null);
   readonly errorRef = signal<string | null>(null);
@@ -35,7 +41,7 @@ export class ProjectsPage implements OnInit {
   readonly total = signal(0);
   readonly limit = signal(50);
   readonly offset = signal(0);
-  readonly q = signal('');
+  readonly searchText = signal('');
   readonly loading = signal(false);
   form = { key: '', name: '', description: '' };
 
@@ -48,7 +54,7 @@ export class ProjectsPage implements OnInit {
     this.errorRef.set(null);
     this.loading.set(true);
     const query = new URLSearchParams({
-      q: this.q(),
+      q: effectiveSearchQuery(this.searchText()),
       limit: String(this.limit()),
       offset: String(this.offset()),
     });
@@ -65,9 +71,9 @@ export class ProjectsPage implements OnInit {
   }
 
   setQuery(q: string): void {
-    this.q.set(q);
+    this.searchText.set(q);
     this.offset.set(0);
-    this.reload();
+    this.searchDebounce = scheduleDebouncedSearch(this.searchDebounce, q, () => this.reload());
   }
 
   prevPage(): void {

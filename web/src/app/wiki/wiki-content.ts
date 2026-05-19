@@ -370,7 +370,7 @@ export const WIKI_CONTENT: Record<WikiId, WikiContent> = {
         bullets: [
           'Lists flag_versions for one flag (version number, change type, timestamp).',
           'Opened from Flags → History on a specific flag.',
-          'Does not auto-rollback — use Edit flag on the Flags page to restore settings.',
+          'Rollback — use Rollback to this version on an older row (confirm with flag key); creates a new version from that snapshot.',
         ],
       },
       {
@@ -421,7 +421,7 @@ export const WIKI_CONTENT: Record<WikiId, WikiContent> = {
         bullets: [
           '1. Open Project picker — search by name or key; selection stores the Project ID (UUID).',
           '2. Optionally set Entity type (flag, environment, segment, project, ...).',
-          '3. Optionally set Entity ID — flag UUID, or flag key depending on server indexing.',
+          '3. Optionally use the toolbar search (min 3 characters) — flag key, flag name, or entity UUID.',
           '4. Click Search (toolbar refresh also re-runs).',
           '5. Use Copy on correlation ID when escalating to engineering.',
         ],
@@ -431,7 +431,7 @@ export const WIKI_CONTENT: Record<WikiId, WikiContent> = {
         bullets: [
           'Project — required; must be the UUID from the picker (shown in picker meta).',
           'Entity type — narrows to one resource kind.',
-          'Entity ID — paste UUID from flag row URL or list metadata; try key if UUID returns empty.',
+          'Entity search — matches flag key, flag name, or exact entity UUID (debounced, server-side).',
         ],
       },
       {

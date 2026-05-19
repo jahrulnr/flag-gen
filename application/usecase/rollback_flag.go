@@ -20,15 +20,15 @@ func NewRollbackFlagUsecase(flags repository.FlagRepository, admin repository.Ad
 	return &RollbackFlagUsecase{flags: flags, admin: admin, snap: snap}
 }
 
-func (u *RollbackFlagUsecase) Execute(ctx context.Context, scope valueobject.Scope, flagID string, targetVersion int, currentVersion int) (entity.Flag, error) {
+func (u *RollbackFlagUsecase) Execute(ctx context.Context, scope valueobject.Scope, flagKeyOrID string, targetVersion int, currentVersion int) (entity.Flag, error) {
 	if targetVersion <= 0 || currentVersion <= 0 {
 		return entity.Flag{}, apperror.NewValidationError(apperror.ValidationError, "invalid version", nil)
 	}
-	snap, err := u.admin.GetFlagVersionSnapshot(ctx, scope, flagID, targetVersion)
+	cur, err := u.resolveFlag(ctx, scope, flagKeyOrID)
 	if err != nil {
 		return entity.Flag{}, err
 	}
-	cur, err := u.flags.FindByID(ctx, scope, flagID)
+	snap, err := u.admin.GetFlagVersionSnapshot(ctx, scope, cur.ID, targetVersion)
 	if err != nil {
 		return entity.Flag{}, err
 	}
@@ -51,4 +51,12 @@ func (u *RollbackFlagUsecase) Execute(ctx context.Context, scope valueobject.Sco
 		u.snap.AfterFlagMutation(ctx, scope)
 	}
 	return out, err
+}
+
+func (u *RollbackFlagUsecase) resolveFlag(ctx context.Context, scope valueobject.Scope, flagKeyOrID string) (*entity.Flag, error) {
+	cur, err := u.flags.FindByKey(ctx, scope, flagKeyOrID)
+	if err == nil {
+		return cur, nil
+	}
+	return u.flags.FindByID(ctx, scope, flagKeyOrID)
 }

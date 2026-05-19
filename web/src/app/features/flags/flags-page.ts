@@ -4,6 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { ApiService } from '../../core/api.service';
+import {
+  effectiveSearchQuery,
+  scheduleDebouncedSearch,
+  SearchDebounceHandle,
+} from '../../core/list-search';
 import { EvaluationResult, Flag, rowID, rowKey, rowName } from '../../core/models';
 import { applyApiFailureToSignals } from '../../core/user-facing-api-error';
 import { ProjectDirectoryService } from '../../core/project-directory.service';
@@ -32,6 +37,7 @@ export class FlagsPage implements OnInit {
   private readonly projectDirectory = inject(ProjectDirectoryService);
   private readonly route = inject(ActivatedRoute);
   private readonly realtime = inject(RealtimeService);
+  private searchDebounce: SearchDebounceHandle = null;
 
   readonly projectId = signal('');
   readonly environmentKey = signal('');
@@ -41,7 +47,7 @@ export class FlagsPage implements OnInit {
   readonly total = signal(0);
   readonly limit = signal(50);
   readonly offset = signal(0);
-  readonly q = signal('');
+  readonly searchText = signal('');
   readonly loading = signal(false);
   readonly valueTypeMenuOpen = signal(false);
   readonly formDialogOpen = signal(false);
@@ -79,7 +85,7 @@ export class FlagsPage implements OnInit {
     this.errorRef.set(null);
     this.loading.set(true);
     const query = new URLSearchParams({
-      q: this.q(),
+      q: effectiveSearchQuery(this.searchText()),
       limit: String(this.limit()),
       offset: String(this.offset()),
     });
@@ -96,9 +102,9 @@ export class FlagsPage implements OnInit {
   }
 
   setQuery(q: string): void {
-    this.q.set(q);
+    this.searchText.set(q);
     this.offset.set(0);
-    this.reload();
+    this.searchDebounce = scheduleDebouncedSearch(this.searchDebounce, q, () => this.reload());
   }
 
   prevPage(): void {

@@ -4,6 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 
 import { ApiService } from '../../core/api.service';
+import {
+  effectiveSearchQuery,
+  scheduleDebouncedSearch,
+  SearchDebounceHandle,
+} from '../../core/list-search';
 import { Segment, rowID, rowKey, rowName } from '../../core/models';
 import { applyApiFailureToSignals } from '../../core/user-facing-api-error';
 import { ProjectDirectoryService } from '../../core/project-directory.service';
@@ -29,6 +34,7 @@ export class SegmentsPage implements OnInit {
   private readonly api = inject(ApiService);
   private readonly projectDirectory = inject(ProjectDirectoryService);
   private readonly route = inject(ActivatedRoute);
+  private searchDebounce: SearchDebounceHandle = null;
   readonly projectId = signal('');
   readonly segments = signal<Segment[]>([]);
   readonly error = signal<string | null>(null);
@@ -37,7 +43,7 @@ export class SegmentsPage implements OnInit {
   readonly total = signal(0);
   readonly limit = signal(50);
   readonly offset = signal(0);
-  readonly q = signal('');
+  readonly searchText = signal('');
   readonly loading = signal(false);
 
   form = this.defaultForm();
@@ -57,7 +63,7 @@ export class SegmentsPage implements OnInit {
     this.errorRef.set(null);
     this.loading.set(true);
     const query = new URLSearchParams({
-      q: this.q(),
+      q: effectiveSearchQuery(this.searchText()),
       limit: String(this.limit()),
       offset: String(this.offset()),
     });
@@ -74,9 +80,9 @@ export class SegmentsPage implements OnInit {
   }
 
   setQuery(q: string): void {
-    this.q.set(q);
+    this.searchText.set(q);
     this.offset.set(0);
-    this.reload();
+    this.searchDebounce = scheduleDebouncedSearch(this.searchDebounce, q, () => this.reload());
   }
 
   prevPage(): void {

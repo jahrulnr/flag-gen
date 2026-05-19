@@ -4,6 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { ApiService } from '../../core/api.service';
+import {
+  effectiveSearchQuery,
+  scheduleDebouncedSearch,
+  SearchDebounceHandle,
+} from '../../core/list-search';
 import { EnvironmentRow, rowKey, rowName } from '../../core/models';
 import { applyApiFailureToSignals } from '../../core/user-facing-api-error';
 import { ProjectDirectoryService } from '../../core/project-directory.service';
@@ -30,6 +35,7 @@ export class EnvironmentsPage implements OnInit {
   private readonly api = inject(ApiService);
   private readonly projectDirectory = inject(ProjectDirectoryService);
   private readonly route = inject(ActivatedRoute);
+  private searchDebounce: SearchDebounceHandle = null;
   readonly projectId = signal('');
   readonly environments = signal<EnvironmentRow[]>([]);
   readonly error = signal<string | null>(null);
@@ -38,7 +44,7 @@ export class EnvironmentsPage implements OnInit {
   readonly total = signal(0);
   readonly limit = signal(50);
   readonly offset = signal(0);
-  readonly q = signal('');
+  readonly searchText = signal('');
   readonly loading = signal(false);
   form = { key: '', name: '', sortOrder: 0 };
 
@@ -57,7 +63,7 @@ export class EnvironmentsPage implements OnInit {
     this.errorRef.set(null);
     this.loading.set(true);
     const query = new URLSearchParams({
-      q: this.q(),
+      q: effectiveSearchQuery(this.searchText()),
       limit: String(this.limit()),
       offset: String(this.offset()),
     });
@@ -76,9 +82,13 @@ export class EnvironmentsPage implements OnInit {
   }
 
   setQuery(q: string): void {
-    this.q.set(q);
+    this.searchText.set(q);
     this.offset.set(0);
-    this.reload();
+    this.searchDebounce = scheduleDebouncedSearch(this.searchDebounce, q, () => this.reload());
+  }
+
+  canCreate(): boolean {
+    return Boolean(this.projectId());
   }
 
   prevPage(): void {
@@ -92,6 +102,9 @@ export class EnvironmentsPage implements OnInit {
   }
 
   create(): void {
+    if (!this.projectId()) {
+      return;
+    }
     this.error.set(null);
     this.errorRef.set(null);
     this.api.post(`/projects/${this.projectId()}/environments`, this.form).subscribe({

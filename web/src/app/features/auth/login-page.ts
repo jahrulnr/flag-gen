@@ -27,12 +27,6 @@ export class LoginPage implements OnInit {
     });
   }
 
-  signInDev(): void {
-    this.error = '';
-    this.auth.signInDev();
-    void this.router.navigateByUrl('/dashboard/projects');
-  }
-
   submit(): void {
     if (!this.email.trim() || !this.password.trim()) {
       this.error = 'Email and password are required.';
