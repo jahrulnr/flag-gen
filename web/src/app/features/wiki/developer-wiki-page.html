@@ -1,0 +1,126 @@
+<section class="page wiki-page developer-wiki">
+  <header>
+    <div>
+      <p class="eyebrow">Wiki · Developer</p>
+      <h1>Integrasi SDK</h1>
+    </div>
+    <div class="page-actions">
+      <app-wiki-button wikiId="developer-wiki" />
+    </div>
+  </header>
+
+  <p class="wiki-page__hint">
+    Dua alur terpisah: <strong>definisi flag</strong> (sync/cache) dan <strong>evaluate</strong> (per request per user).
+    Dokumentasi repo: <code>docs/guide/sdk/sdk-flagclient_id.md</code> · contoh: <code>examples/golang-service</code>
+  </p>
+
+  <section class="wiki-block" aria-label="Dua alur integrasi">
+    <h2>Dua alur integrasi</h2>
+    <ul>
+      <li>
+        <strong>Definisi flag</strong> — enabled, value, rules, version. WebSocket
+        <code>flags.snapshot</code> + delta, atau GET .../flags. Satu set definisi per project/environment, tidak per user.
+      </li>
+      <li>
+        <strong>Evaluate</strong> — POST .../flags/evaluate dengan userId + attributes → value, reason, source.
+        Wajib untuk rules dan rollout; <code>Variation()</code> dari cache lokal tidak menjalankan targeting penuh.
+      </li>
+    </ul>
+    <p>
+      <a routerLink="/dashboard/wiki/flag-gen">Konsep Flag Gen →</a>
+      menjelaskan arsitektur; halaman ini fokus ke kode dan endpoint.
+    </p>
+  </section>
+
+  <section class="wiki-block" aria-label="Project ID vs key">
+    <h2>Project key vs Project ID</h2>
+    <ul>
+      <li><strong>Project key</strong> — label manusia di dashboard (mis. development).</li>
+      <li><strong>Project ID</strong> — UUID di baris Projects; dipakai di path API dan query WebSocket <code>projectId=</code>.</li>
+      <li><strong>Environment key</strong> — mis. production; ada di path <code>.../environments/:environmentKey/...</code>.</li>
+    </ul>
+  </section>
+
+  <div class="guide-tabs" role="tablist" aria-label="Jenis integrasi">
+    <button
+      *ngFor="let guide of guides"
+      type="button"
+      role="tab"
+      class="guide-tab"
+      [class.is-active]="active() === guide.id"
+      [attr.aria-selected]="active() === guide.id"
+      (click)="active.set(guide.id)"
+    >
+      <i [class]="guide.icon" aria-hidden="true"></i>
+      <span>{{ guide.label }}</span>
+    </button>
+  </div>
+
+  <section class="guide-layout" aria-label="Panduan terpilih">
+    <div class="guide-main">
+      <p class="eyebrow">{{ activeGuide().label }}</p>
+      <h2>{{ activeGuide().summary }}</h2>
+      <ol>
+        <li *ngFor="let step of activeGuide().steps">{{ step }}</li>
+      </ol>
+    </div>
+
+    <div class="guide-code">
+      <header>
+        <span>Contoh</span>
+        <i class="fa-solid fa-code" aria-hidden="true"></i>
+      </header>
+      <pre><code>{{ activeGuide().code }}</code></pre>
+    </div>
+  </section>
+
+  <section class="wiki-block" aria-label="Environment variables">
+    <h2>Environment variables (local / contoh Go)</h2>
+    <ul class="env-checklist">
+      <li><code>FLAG_GEN_BASE_URL</code> — base API, mis. http://localhost:6123/v1</li>
+      <li><code>FLAG_GEN_PROJECT_ID</code> — UUID dari halaman Projects</li>
+      <li><code>FLAG_GEN_ENVIRONMENT_KEY</code> — mis. development</li>
+      <li><code>FLAG_GEN_API_KEY</code> — API key server untuk evaluate</li>
+      <li><code>BROADCAST_DEV_TOKEN</code> — harus sama dengan server .env agar WebSocket tidak 401</li>
+      <li><code>FLAG_GEN_POLL_FALLBACK=true</code> — opsional; polling HTTP hanya fallback</li>
+    </ul>
+    <p>Server: <code>OUTBOX_WORKER_ENABLED=true</code>, <code>BROADCAST_CONSUMER_ENABLED=true</code>, RabbitMQ aktif.</p>
+  </section>
+
+  <section class="guide-reference" aria-label="Referensi endpoint">
+    <h2>Referensi endpoint</h2>
+    <div class="reference-grid">
+      <article>
+        <strong>Browser — list</strong>
+        <code>GET /v1/client/projects/:projectId/environments/:environmentKey/flags</code>
+      </article>
+      <article>
+        <strong>Browser — evaluate satu flag</strong>
+        <code>GET /v1/client/.../flags/:flagKey/evaluate?userId=...</code>
+      </article>
+      <article>
+        <strong>Server — evaluate</strong>
+        <code>POST /v1/projects/:projectId/environments/:environmentKey/flags/evaluate</code>
+      </article>
+      <article>
+        <strong>Backend — broadcast</strong>
+        <code>GET /v1/broadcast/flags?projectId=...&amp;environmentKey=...&amp;token=...</code>
+      </article>
+    </div>
+  </section>
+
+  <section class="wiki-block" aria-label="Live updates checklist">
+    <h2>Checklist live update tidak jalan</h2>
+    <ul>
+      <li>Log service: <code>websocket connected</code> — jika 401, set <code>BROADCAST_DEV_TOKEN</code>.</li>
+      <li>Dashboard ubah flag → dalam beberapa detik service harus log <code>flag updated</code> tanpa redeploy.</li>
+      <li>RabbitMQ dan worker broadcast aktif di server flag-gen.</li>
+      <li>Jangan mengandalkan polling sebagai jalur utama — WebSocket adalah desain utama.</li>
+    </ul>
+  </section>
+
+  <nav class="wiki-links" aria-label="Wiki terkait">
+    <a routerLink="/dashboard/wiki/guide">Panduan dashboard →</a>
+    <a routerLink="/dashboard/wiki/flag-gen">Konsep Flag Gen →</a>
+  </nav>
+</section>

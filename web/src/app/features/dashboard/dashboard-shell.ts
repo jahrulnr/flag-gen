@@ -176,8 +176,27 @@ export class DashboardShell implements OnInit {
     return this.routerUrl().split('?')[0].includes('/dashboard/roles');
   }
 
-  isDeveloperWikiRoute(): boolean {
-    return this.routerUrl().split('?')[0].includes('/dashboard/developer-wiki');
+  isWikiGuideRoute(): boolean {
+    return this.routerUrl().split('?')[0].includes('/dashboard/wiki/guide');
+  }
+
+  isWikiFlagGenRoute(): boolean {
+    return this.routerUrl().split('?')[0].includes('/dashboard/wiki/flag-gen');
+  }
+
+  isWikiDeveloperRoute(): boolean {
+    const path = this.routerUrl().split('?')[0];
+    return path.includes('/dashboard/wiki/developer') || path.includes('/dashboard/developer-wiki');
+  }
+
+  isWikiRoute(): boolean {
+    return this.isWikiGuideRoute() || this.isWikiFlagGenRoute() || this.isWikiDeveloperRoute();
+  }
+
+  wikiBreadcrumbLabel(): string {
+    if (this.isWikiGuideRoute()) return 'Panduan';
+    if (this.isWikiFlagGenRoute()) return 'Konsep Flag Gen';
+    return 'Developer';
   }
 
   isAccessRoute(): boolean {
@@ -185,7 +204,7 @@ export class DashboardShell implements OnInit {
   }
 
   isSystemRoute(): boolean {
-    return this.isAuditRoute() || this.isDeveloperWikiRoute();
+    return this.isAuditRoute();
   }
 
   isProjectsListCurrent(): boolean {

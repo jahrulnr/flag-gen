@@ -44,22 +44,6 @@
         </li>
       </ul>
 
-      <p class="nav-label">System</p>
-      <ul class="nav-root">
-        <li>
-          <a class="nav-link" [routerLink]="['/dashboard/audit']" routerLinkActive="is-active">
-            <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
-            <span>Audit</span>
-          </a>
-        </li>
-        <li>
-          <a class="nav-link" [routerLink]="['/dashboard/developer-wiki']" routerLinkActive="is-active">
-            <i class="fa-solid fa-book-open" aria-hidden="true"></i>
-            <span>Developer Wiki</span>
-          </a>
-        </li>
-      </ul>
-
       <p class="nav-label">Access</p>
       <ul class="nav-root">
         <li>
@@ -75,6 +59,46 @@
           </a>
         </li>
       </ul>
+
+      <p class="nav-label">System</p>
+      <ul class="nav-root">
+        <li>
+          <a class="nav-link" [routerLink]="['/dashboard/audit']" routerLinkActive="is-active">
+            <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+            <span>Audit</span>
+          </a>
+        </li>
+      </ul>
+
+      <p class="nav-label">Wiki</p>
+      <ul class="nav-root">
+        <li>
+          <a class="nav-link" [routerLink]="['/dashboard/wiki/guide']" routerLinkActive="is-active">
+            <i class="fa-solid fa-compass" aria-hidden="true"></i>
+            <span>Panduan</span>
+          </a>
+        </li>
+        <li>
+          <a
+            class="nav-link"
+            [routerLink]="['/dashboard/wiki/flag-gen']"
+            routerLinkActive="is-active"
+          >
+            <i class="fa-solid fa-lightbulb" aria-hidden="true"></i>
+            <span>Konsep Flag Gen</span>
+          </a>
+        </li>
+        <li>
+          <a
+            class="nav-link"
+            [routerLink]="['/dashboard/wiki/developer']"
+            routerLinkActive="is-active"
+          >
+            <i class="fa-solid fa-code" aria-hidden="true"></i>
+            <span>Developer</span>
+          </a>
+        </li>
+      </ul>
     </nav>
   </aside>
 
@@ -83,11 +107,19 @@
       <div class="topbar__left">
         <strong>Admin dashboard</strong>
         <nav class="breadcrumb" aria-label="Breadcrumb">
-          <ng-container *ngIf="isSystemRoute(); else workspaceBread">
-            <span class="breadcrumb__system">System</span>
+          <ng-container *ngIf="isWikiRoute(); else routeBread">
+            <span class="breadcrumb__system">Wiki</span>
             <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
-            <span class="breadcrumb__here" aria-current="page">{{ isDeveloperWikiRoute() ? 'Developer Wiki' : 'Audit' }}</span>
+            <span class="breadcrumb__here" aria-current="page">{{ wikiBreadcrumbLabel() }}</span>
           </ng-container>
+
+          <ng-template #routeBread>
+            <ng-container *ngIf="isSystemRoute(); else workspaceBread">
+              <span class="breadcrumb__system">System</span>
+              <i class="fa-solid fa-chevron-right breadcrumb__sep" aria-hidden="true"></i>
+              <span class="breadcrumb__here" aria-current="page">Audit</span>
+            </ng-container>
+          </ng-template>
 
           <ng-template #workspaceBread>
             <ng-container *ngIf="isAccessRoute(); else projectBread">

@@ -1,0 +1,298 @@
+@use '../projects/projects-page.scss';
+
+.wiki-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.wiki-page header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.wiki-page__hint {
+  color: var(--fg-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.wiki-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.wiki-toc a {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--fg-secondary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.4rem 0.65rem;
+  text-decoration: none;
+}
+
+.wiki-toc a:hover {
+  border-color: rgb(52 211 153 / 42%);
+  color: var(--fg-primary);
+}
+
+.wiki-block {
+  background: rgb(15 23 42 / 72%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+}
+
+.wiki-block h2,
+.wiki-block h3 {
+  color: var(--fg-primary);
+  margin: 0 0 0.65rem;
+}
+
+.wiki-block h2 {
+  font-size: 1.1rem;
+}
+
+.wiki-block p {
+  color: var(--fg-secondary);
+  line-height: 1.55;
+  margin: 0 0 0.65rem;
+}
+
+.wiki-block p:last-child {
+  margin-bottom: 0;
+}
+
+.wiki-block ul,
+.wiki-block ol {
+  color: var(--fg-secondary);
+  display: grid;
+  gap: 0.55rem;
+  line-height: 1.5;
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.wiki-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.wiki-links a {
+  align-items: center;
+  background: rgb(52 211 153 / 10%);
+  border: 1px solid rgb(52 211 153 / 35%);
+  border-radius: var(--radius-sm);
+  color: var(--fg-primary);
+  display: inline-flex;
+  font-weight: 700;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  text-decoration: none;
+}
+
+.wiki-menu-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.wiki-menu-card {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.85rem;
+}
+
+.wiki-menu-card__head {
+  align-items: center;
+  color: var(--fg-primary);
+  display: flex;
+  font-weight: 800;
+  gap: 0.5rem;
+}
+
+.wiki-menu-card__head i {
+  color: var(--accent);
+}
+
+.wiki-menu-card p {
+  color: var(--fg-secondary);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.wiki-menu-card__hint {
+  color: var(--fg-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.wiki-menu-card a.wiki-menu-card__link {
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.wiki-owl-callout {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.85rem;
+}
+
+.wiki-owl-callout i {
+  color: var(--accent);
+  font-size: 1.5rem;
+  margin-top: 0.15rem;
+}
+
+.guide-tabs {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.guide-tab {
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--fg-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 800;
+  gap: 0.55rem;
+  min-height: 2.55rem;
+  padding: 0.65rem 0.85rem;
+}
+
+.guide-tab:hover,
+.guide-tab.is-active {
+  border-color: rgb(52 211 153 / 42%);
+  color: var(--fg-primary);
+}
+
+.guide-tab.is-active {
+  background: rgb(52 211 153 / 12%);
+}
+
+.guide-tab i {
+  color: var(--accent);
+}
+
+.guide-layout {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 0.9fr) minmax(320px, 1.1fr);
+}
+
+.guide-main,
+.guide-code,
+.guide-reference {
+  background: rgb(15 23 42 / 72%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+}
+
+.guide-main h2,
+.guide-reference h2 {
+  color: var(--fg-primary);
+  font-size: 1.1rem;
+  line-height: 1.35;
+  margin: 0.25rem 0 1rem;
+}
+
+.guide-main ol {
+  color: var(--fg-secondary);
+  display: grid;
+  gap: 0.7rem;
+  line-height: 1.5;
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.guide-code {
+  min-width: 0;
+  padding: 0;
+}
+
+.guide-code header {
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--fg-muted);
+  display: flex;
+  font-size: 0.75rem;
+  font-weight: 800;
+  justify-content: space-between;
+  padding: 0.75rem 0.9rem;
+  text-transform: uppercase;
+}
+
+.guide-code pre {
+  margin: 0;
+  overflow: auto;
+  padding: 1rem;
+}
+
+.guide-code code,
+.reference-grid code {
+  color: var(--fg-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.reference-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.reference-grid article {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0.8rem;
+}
+
+.reference-grid strong {
+  color: var(--fg-primary);
+}
+
+.env-checklist {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.env-checklist li {
+  color: var(--fg-secondary);
+  line-height: 1.45;
+}
+
+.env-checklist code {
+  color: var(--fg-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.84rem;
+}
+
+@media (max-width: 980px) {
+  .guide-layout,
+  .reference-grid {
+    grid-template-columns: 1fr;
+  }
+}

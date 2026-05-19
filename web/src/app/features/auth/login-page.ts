@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
@@ -11,13 +11,21 @@ import { AuthService } from '../../core/auth.service';
   templateUrl: './login-page.html',
   styleUrl: './login-page.scss',
 })
-export class LoginPage {
+export class LoginPage implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
   email = 'admin@local';
   password = '';
   error = '';
+
+  ngOnInit(): void {
+    this.auth.ensureDashboardAccess().subscribe((ok) => {
+      if (ok) {
+        void this.router.navigateByUrl('/dashboard/projects');
+      }
+    });
+  }
 
   signInDev(): void {
     this.error = '';

@@ -9,7 +9,6 @@ import { applyApiFailureToSignals } from '../../core/user-facing-api-error';
 import { ProjectDirectoryService } from '../../core/project-directory.service';
 import { DestructiveConfirmDialogComponent } from '../../ui/destructive-confirm-dialog/destructive-confirm-dialog.component';
 import { InlineApiErrorComponent } from '../../ui/inline-api-error/inline-api-error.component';
-import { IntegrationScopeCalloutComponent } from '../../ui/integration-scope-callout/integration-scope-callout.component';
 import { ListToolbarComponent } from '../../ui/list-toolbar/list-toolbar.component';
 import { WikiButtonComponent } from '../../wiki/wiki-button.component';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -23,7 +22,6 @@ import { RealtimeService } from '../realtime/realtime.service';
     WikiButtonComponent,
     DestructiveConfirmDialogComponent,
     InlineApiErrorComponent,
-    IntegrationScopeCalloutComponent,
     ListToolbarComponent,
   ],
   templateUrl: './flags-page.html',

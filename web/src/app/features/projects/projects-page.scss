@@ -47,6 +47,13 @@ p {
   gap: 0.35rem;
 }
 
+.field__label {
+  align-items: baseline;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
 .field .optional {
   color: var(--fg-muted);
   font-weight: 500;

@@ -1,0 +1,73 @@
+<section class="page wiki-page">
+  <header>
+    <div>
+      <p class="eyebrow">{{ content.eyebrow }}</p>
+      <h1>{{ content.title }}</h1>
+    </div>
+    <div class="page-actions" *ngIf="wikiButtonId">
+      <app-wiki-button [wikiId]="wikiButtonId" />
+    </div>
+  </header>
+
+  <p class="wiki-page__hint">{{ content.summary }}</p>
+
+  <nav class="wiki-toc" *ngIf="content.sections?.length && content.id === 'wiki-flag-gen'" aria-label="Daftar isi">
+    <ng-container *ngFor="let s of content.sections">
+      <a *ngIf="s.id" [href]="'#' + s.id">{{ s.title }}</a>
+    </ng-container>
+  </nav>
+
+  <section class="wiki-block" *ngIf="content.tutorialSteps?.length" aria-label="Tutorial singkat">
+    <h2>Tutorial singkat</h2>
+    <ol>
+      <li *ngFor="let step of content.tutorialSteps">{{ step }}</li>
+    </ol>
+  </section>
+
+  <section class="wiki-block" *ngIf="content.menuCards?.length" aria-label="Panduan per menu">
+    <h2>Menu di sidebar</h2>
+    <div class="wiki-menu-grid">
+      <article class="wiki-menu-card" *ngFor="let card of content.menuCards">
+        <div class="wiki-menu-card__head">
+          <i [class]="card.icon" aria-hidden="true"></i>
+          <span>{{ card.title }}</span>
+        </div>
+        <p>{{ card.summary }}</p>
+        <p class="wiki-menu-card__hint">{{ card.wikiHint }}</p>
+        <a class="wiki-menu-card__link" [routerLink]="card.route">Buka halaman →</a>
+      </article>
+    </div>
+  </section>
+
+  <section
+    class="wiki-block wiki-owl-callout"
+    *ngIf="content.id === 'wiki-guide'"
+    aria-label="Owl bantuan"
+  >
+    <i class="fa-solid fa-feather-pointed" aria-hidden="true"></i>
+    <div>
+      <h2>Owl — bantuan di halaman yang sedang dibuka</h2>
+      <p>
+        Setelah membuka Projects, Flags, atau halaman lain, gunakan tombol <strong>?</strong> di header atau
+        FAB owl di kanan bawah. Drawer menampilkan penjelasan singkat khusus halaman itu — tidak perlu
+        meninggalkan form yang sedang Anda isi.
+      </p>
+    </div>
+  </section>
+
+  <section
+    class="wiki-block"
+    *ngFor="let section of content.sections"
+    [attr.id]="section.id"
+  >
+    <h2>{{ section.title }}</h2>
+    <p *ngFor="let para of section.paragraphs">{{ para }}</p>
+    <ul *ngIf="section.bullets?.length">
+      <li *ngFor="let bullet of section.bullets">{{ bullet }}</li>
+    </ul>
+  </section>
+
+  <nav class="wiki-links" *ngIf="content.links?.length" aria-label="Wiki terkait">
+    <a *ngFor="let link of content.links" [routerLink]="link.route">{{ link.label }} →</a>
+  </nav>
+</section>

@@ -1,6 +1,6 @@
 import { isPlatformBrowser } from '@angular/common';
 import { inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { catchError, map, Observable, of, tap } from 'rxjs';
 
 import { ApiService } from './api.service';
 
@@ -27,10 +27,17 @@ export class AuthService {
   private readonly api = inject(ApiService);
   private readonly browser = isPlatformBrowser(this.platformId);
 
-  readonly signedIn = signal(this.restore());
+  readonly signedIn = signal(this.hasStoredSession());
   readonly user = signal<AuthUser | null>(null);
 
+  constructor() {
+    if (this.browser && window.localStorage.getItem(STORAGE_KEY) === 'session') {
+      this.refreshUserFromServer();
+    }
+  }
+
   signInDev(): void {
+    this.user.set(null);
     this.signedIn.set(true);
     if (this.browser) {
       window.localStorage.setItem(STORAGE_KEY, 'dev');
@@ -58,10 +65,53 @@ export class AuthService {
     this.api.post('/auth/logout', {}).subscribe({ error: () => undefined });
   }
 
-  private restore(): boolean {
+  /**
+   * Route guard: dev bypass trusts localStorage; password login re-validates flag_gen_session cookie.
+   */
+  ensureDashboardAccess(): Observable<boolean> {
+    if (!this.browser) {
+      return of(false);
+    }
+    const marker = window.localStorage.getItem(STORAGE_KEY);
+    if (marker === 'dev') {
+      this.signedIn.set(true);
+      return of(true);
+    }
+    if (marker !== 'session') {
+      this.signedIn.set(false);
+      return of(false);
+    }
+    if (this.signedIn() && this.user()) {
+      return of(true);
+    }
+    return this.api.get<AuthResponse>('/auth/me').pipe(
+      tap((res) => {
+        this.user.set(res.user);
+        this.signedIn.set(true);
+      }),
+      map(() => true),
+      catchError(() => {
+        this.signOut();
+        return of(false);
+      }),
+    );
+  }
+
+  private hasStoredSession(): boolean {
     if (!this.browser) {
       return false;
     }
-    return window.localStorage.getItem(STORAGE_KEY) === 'dev';
+    const marker = window.localStorage.getItem(STORAGE_KEY);
+    return marker === 'dev' || marker === 'session';
+  }
+
+  private refreshUserFromServer(): void {
+    this.api.get<AuthResponse>('/auth/me').subscribe({
+      next: (res) => {
+        this.user.set(res.user);
+        this.signedIn.set(true);
+      },
+      error: () => this.signOut(),
+    });
   }
 }

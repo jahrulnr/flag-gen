@@ -7,7 +7,9 @@ import { AuditPage } from './features/audit/audit-page';
 import { FlagHistoryPage } from './features/audit/flag-history-page';
 import { LoginPage } from './features/auth/login-page';
 import { DashboardShell } from './features/dashboard/dashboard-shell';
-import { DeveloperWikiPage } from './features/developer-wiki/developer-wiki-page';
+import { DeveloperWikiPage } from './features/wiki/developer-wiki-page';
+import { WikiFlagGenPage } from './features/wiki/wiki-flag-gen-page';
+import { WikiGuidePage } from './features/wiki/wiki-guide-page';
 import { EnvironmentsPage } from './features/environments/environments-page';
 import { FlagsPage } from './features/flags/flags-page';
 import { LifecyclePage } from './features/lifecycle/lifecycle-page';
@@ -46,9 +48,13 @@ export const routes: Routes = [
         data: { wikiId: 'segments' },
       },
       { path: 'audit', component: AuditPage, data: { wikiId: 'audit' } },
-      { path: 'developer-wiki', component: DeveloperWikiPage, data: { wikiId: 'developer-wiki' } },
-      { path: 'users', component: UsersPage, data: { wikiId: 'lifecycle' } },
-      { path: 'roles', component: RolesPage, data: { wikiId: 'lifecycle' } },
+      { path: 'wiki', pathMatch: 'full', redirectTo: 'wiki/guide' },
+      { path: 'wiki/guide', component: WikiGuidePage, data: { wikiId: 'wiki-guide' } },
+      { path: 'wiki/flag-gen', component: WikiFlagGenPage, data: { wikiId: 'wiki-flag-gen' } },
+      { path: 'wiki/developer', component: DeveloperWikiPage, data: { wikiId: 'developer-wiki' } },
+      { path: 'developer-wiki', redirectTo: 'wiki/developer' },
+      { path: 'users', component: UsersPage, data: { wikiId: 'users' } },
+      { path: 'roles', component: RolesPage, data: { wikiId: 'roles' } },
     ],
   },
   { path: '**', redirectTo: 'lifecycle' },
