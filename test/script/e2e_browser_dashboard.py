@@ -192,7 +192,7 @@ def main():
         navigate(cdp, f"{app_root}/login")
         eval_js(cdp, "localStorage.setItem('flag-gen-dev-session', 'dev')")
 
-        navigate(cdp, f"{app_root}/dashboard/developer-wiki")
+        navigate(cdp, f"{app_root}/dashboard/wiki/developer")
         wait_for(cdp, "document.body.innerText.includes('Developer Wiki') && document.body.innerText.includes('Angular / Browser')")
         screenshot(cdp, os.path.join(OUT_DIR, "browser-developer-wiki.png"))
 
