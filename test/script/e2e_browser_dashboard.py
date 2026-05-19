@@ -17,7 +17,7 @@ API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:6123/v1")
 PROJECT_KEY = os.environ.get("PROJECT_KEY", "development")
 PROJECT_ID = os.environ.get("PROJECT_ID", "")
 ENVIRONMENT_KEY = os.environ.get("ENVIRONMENT_KEY", "development")
-OUT_DIR = os.environ.get("BROWSER_E2E_OUT", "dogfood-output/screenshots")
+OUT_DIR = os.environ.get("BROWSER_E2E_OUT", "test/report/screenshots")
 CHROME = os.environ.get("CHROME_BIN") or shutil.which("google-chrome") or shutil.which("chromium") or shutil.which("chromium-browser")
 DEBUG_PORT = int(os.environ.get("CHROME_DEBUG_PORT", "9223"))
 
