@@ -24,9 +24,9 @@
 
       <p *ngIf="error" class="login-error" role="alert">{{ error }}</p>
 
-      <button type="submit">
+      <button type="submit" [disabled]="submitting">
         <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
-        Sign in
+        {{ submitting ? 'Signing in…' : 'Sign in' }}
       </button>
     </form>
   </section>

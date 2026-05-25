@@ -18,6 +18,7 @@ export class LoginPage implements OnInit {
   email = 'admin@local';
   password = '';
   error = '';
+  submitting = false;
 
   ngOnInit(): void {
     this.auth.ensureDashboardAccess().subscribe((ok) => {
@@ -33,9 +34,11 @@ export class LoginPage implements OnInit {
       return;
     }
     this.error = '';
+    this.submitting = true;
     this.auth.login(this.email, this.password).subscribe({
       next: () => void this.router.navigateByUrl('/dashboard/projects'),
       error: (err: { message?: string }) => {
+        this.submitting = false;
         this.error = err.message ?? 'Sign in failed.';
       },
     });

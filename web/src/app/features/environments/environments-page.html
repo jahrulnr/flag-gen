@@ -28,6 +28,10 @@
     (refresh)="reload()"
   />
 
+  <div *ngIf="successMessage()" class="success-banner" role="status">
+    {{ successMessage() }}
+  </div>
+
   <form (ngSubmit)="create()" class="form">
     <label class="field">
       Key
