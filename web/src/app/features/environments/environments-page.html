@@ -28,6 +28,10 @@
     (refresh)="reload()"
   />
 
+  <div *ngIf="successMessage()" class="success-banner" role="status">
+    {{ successMessage() }}
+  </div>
+
   <form (ngSubmit)="create()" class="form">
     <label class="field">
       Key
@@ -59,7 +63,7 @@
       <div class="row-actions">
         <a class="btn btn--ghost" [routerLink]="['/dashboard/projects', projectId(), 'environments', key(env), 'flags']">
           <i class="fa-solid fa-flag" aria-hidden="true"></i>
-          Manage flags
+          Flags
         </a>
         <button type="button" class="btn btn--icon btn--danger" (click)="remove(env)" [attr.aria-label]="'Delete environment ' + name(env)">
           <i class="fa-solid fa-trash" aria-hidden="true"></i>

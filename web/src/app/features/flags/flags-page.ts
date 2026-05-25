@@ -306,7 +306,7 @@ export class FlagsPage implements OnInit {
     if (p === env) {
       return `Project and environment share the label “${p}”`;
     }
-    return `Proj. ${p} · Env ${env}`;
+    return `Project ${p} · Environment ${env}`;
   }
 
   onValueTypeChange(): void {

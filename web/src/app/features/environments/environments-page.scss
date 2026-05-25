@@ -1,1 +1,18 @@
 @use '../projects/projects-page.scss';
+
+.field .hint {
+  color: var(--fg-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.success-banner {
+  background: rgb(52 211 153 / 12%);
+  border: 1px solid rgb(52 211 153 / 26%);
+  border-radius: var(--radius-md);
+  color: var(--fg-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  padding: 0.75rem 1rem;
+}

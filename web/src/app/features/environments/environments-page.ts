@@ -46,6 +46,7 @@ export class EnvironmentsPage implements OnInit {
   readonly offset = signal(0);
   readonly searchText = signal('');
   readonly loading = signal(false);
+  readonly successMessage = signal<string | null>(null);
   form = { key: '', name: '', sortOrder: 0 };
 
   ngOnInit(): void {
