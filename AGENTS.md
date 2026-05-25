@@ -36,3 +36,47 @@ Before changing code, route yourself to the relevant skill in `.agents/skills/` 
 - If a task updates generated DI wiring, verify both normal and wire-inject builds if relevant.
 - When verification cannot be run, say exactly what was not run and why.
 
+## Cursor Cloud specific instructions
+
+### Services
+
+The project requires **MariaDB** (10.11+) and **Redis** as mandatory infrastructure. RabbitMQ is optional (only for outbox/broadcast WebSocket features). The `.env.example` DSN uses `root:root@tcp(127.0.0.1:3306)/flag_gen` and Redis password `guest` on port 6379.
+
+- **MariaDB** is required instead of MySQL 8.0 because migration files use `CREATE INDEX IF NOT EXISTS` syntax (MariaDB-only in the 8.x era).
+- **Go backend**: `make dev-api` (port 6123). Loads `.env` via `scripts/load-dotenv.sh`.
+- **Angular dashboard**: `make dev-web` (port 6124, serves at `/app/`). The Go backend reverse-proxies `/app/*` to the Angular dev server.
+- `make dev` runs both in parallel.
+
+### Starting services in Cloud VM
+
+MariaDB and Redis are not managed by systemd in the Cloud VM. Start them manually:
+
+```bash
+sudo mysqld --user=mysql --datadir=/var/lib/mysql &
+sudo redis-server --daemonize yes --requirepass guest
+```
+
+Then create the database if it doesn't exist:
+```bash
+mysql -h127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS flag_gen CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+```
+
+### Key commands
+
+| Task | Command |
+|------|---------|
+| Migrate DB | `make migrate` |
+| Seed demo data | `make seed` |
+| Run all Go tests | `go test ./...` |
+| Lint (Go) | `golangci-lint run --timeout=5m` (needs `~/go/bin` in PATH) |
+| Unit test coverage | `make unit-test-coverage` |
+| Dev backend only | `make dev-api` |
+| Dev frontend only | `make dev-web` |
+| Both | `make dev` |
+
+### Gotchas
+
+- `golangci-lint` must be built with Go 1.26+. The `go install` default may download a binary built with Go 1.25. Force rebuild: `GOROOT=$(go env GOROOT) $(go env GOROOT)/bin/go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest`.
+- The lint target reports pre-existing warnings (errcheck, staticcheck). These are not introduced by agent changes.
+- Demo admin credentials (created by `make migrate` on empty DB): `admin@local` / `admin`.
+- Angular frontend `npm install` uses npm (not pnpm/yarn) per `web/package.json` `packageManager` field.
