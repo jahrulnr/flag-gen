@@ -98,7 +98,7 @@
             <input name="enabled" type="checkbox" [(ngModel)]="form.enabled" />
             <span>
               <strong>Enabled</strong>
-              <small>Serve this flag in the environment</small>
+              <small>When enabled, this flag is actively evaluated for clients</small>
             </span>
           </label>
           <label class="toggle-field">
@@ -117,7 +117,7 @@
             />
             <span>
               <strong>Default value</strong>
-              <small>{{ form.defaultValue === 'true' ? 'True' : 'False' }} when no targeting rule matches</small>
+              <small>Returned when no targeting rule matches (currently {{ form.defaultValue === 'true' ? 'true' : 'false' }})</small>
             </span>
           </label>
           <label class="field field--full" *ngIf="form.valueType !== 'boolean'">
